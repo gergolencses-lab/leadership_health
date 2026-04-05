@@ -91,7 +91,7 @@ body {
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 24px 20px 120px;
+  padding: 56px 20px 120px;
 }
 .screen {
   width: 100%;
@@ -547,40 +547,46 @@ body {
 .theme-dot[data-theme="simple"] { background: #4A90D9; }
 .theme-dot[data-theme="sunset"] { background: #E07A5F; }
 
-/* ========== BLOCK WATERMARK ========== */
-.block-watermark {
+/* ========== BLOCK WATERMARK (fixed outside scroll container) ========== */
+.block-watermark-global {
   position: fixed;
-  right: -10px;
-  bottom: 60px;
-  width: 320px;
-  height: 420px;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0.07;
   pointer-events: none;
   z-index: 0;
-  max-width: 75vw;
 }
-.block-watermark img {
+.block-watermark-global img {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  padding: 48px 32px;
 }
 
-/* ========== BLOCK BADGE (sticky on all question screens) ========== */
-.block-badge {
+/* ========== BLOCK BADGE (fixed outside scroll container) ========== */
+.block-badge-global {
+  position: fixed;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
   font-family: var(--font-body);
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-secondary);
-  padding: 8px 0 8px;
-  margin: -24px -20px 16px;
-  padding-left: 20px;
-  padding-right: 20px;
+  padding: 8px 20px;
   background: var(--bg);
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  z-index: 90;
   border-bottom: 1px solid color-mix(in srgb, var(--muted) 50%, transparent);
 }
 
@@ -713,6 +719,8 @@ body {
 <body>
 <div class="app" id="app">
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="block-watermark-global" id="blockWatermark" style="display:none;"><img id="blockWatermarkImg" src="" alt=""></div>
+  <div class="block-badge-global" id="blockBadge" style="display:none;"></div>
   <div class="screen-container" id="screenContainer"></div>
   <div class="nav-bar" id="navBar">
     <div class="nav-inner">
@@ -1231,9 +1239,39 @@ const WATERMARKS = {
   consciousness: 'images/consciousness.png',
 };
 
-function getBlockWatermark(blockId) {
-  if (!blockId || !WATERMARKS[blockId]) return '';
-  return `<div class="block-watermark"><img src="${WATERMARKS[blockId]}" alt="" loading="lazy"></div>`;
+function updateWatermark(index) {
+  const wm = document.getElementById('blockWatermark');
+  const img = document.getElementById('blockWatermarkImg');
+  const def = SCREENS[index];
+  let blockId = null;
+  if (def.type === 'questions' && def.questions) {
+    const firstQ = qMap[def.questions[0]];
+    if (firstQ) blockId = firstQ.block;
+  }
+  if (blockId && WATERMARKS[blockId]) {
+    img.src = WATERMARKS[blockId];
+    wm.style.display = 'flex';
+  } else {
+    wm.style.display = 'none';
+  }
+}
+
+function updateBlockBadge(index) {
+  const badge = document.getElementById('blockBadge');
+  const def = SCREENS[index];
+  if (def.type !== 'questions' || def.blockIntro) {
+    badge.style.display = 'none';
+    badge.textContent = '';
+    return;
+  }
+  const firstQ = qMap[def.questions[0]];
+  const b = firstQ ? BLOCKS[firstQ.block] : null;
+  if (b && b.num) {
+    badge.textContent = `${b.num} ${b.title}`;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 // ========== RENDER SCREEN ==========
@@ -1248,9 +1286,7 @@ function renderScreen(index) {
   } else if (def.type === 'thankyou') {
     html = renderThankYou();
   } else {
-    // Add watermark for the block
     const firstQ = qMap[def.questions[0]];
-    if (firstQ) html += getBlockWatermark(firstQ.block);
 
     if (def.blockIntro) {
       const b = BLOCKS[def.blockIntro];
@@ -1259,11 +1295,6 @@ function renderScreen(index) {
       html += `<div class="screen-title">${b.title}</div>`;
       html += `<div class="screen-subtitle">${b.subtitle}</div>`;
       html += `</div>`;
-    } else {
-      const b = firstQ ? BLOCKS[firstQ.block] : null;
-      if (b && b.num) {
-        html += `<div class="block-badge">${b.num} ${b.title}</div>`;
-      }
     }
     def.questions.forEach(qid => {
       html += renderQuestion(qMap[qid]);
@@ -1353,6 +1384,8 @@ function showScreen(index, direction) {
   state.currentScreen = index;
   updateProgress();
   updateNav();
+  updateWatermark(index);
+  updateBlockBadge(index);
   saveDraft();
 }
 
