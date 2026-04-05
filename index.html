@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Vezetői Jóllét Szűrés</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Nunito:wght@400;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ========== THEMES ========== */
+:root, [data-theme="grounded"] {
+  --primary: #8B5E3C;
+  --accent: #D4943A;
+  --surface: #F5EDE3;
+  --bg: #FAF8F5;
+  --text: #3D2B1F;
+  --text-secondary: #7A6A5E;
+  --muted: #C4B5A3;
+  --error: #C0392B;
+  --font-heading: 'Libre Baskerville', serif;
+  --font-body: 'Source Sans 3', sans-serif;
+}
+[data-theme="simple"] {
+  --primary: #2D3436;
+  --accent: #4A90D9;
+  --surface: #F0F0F0;
+  --bg: #FFFFFF;
+  --text: #2D3436;
+  --text-secondary: #636E72;
+  --muted: #DFE6E9;
+  --error: #E74C3C;
+  --font-heading: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+[data-theme="sunset"] {
+  --primary: #E07A5F;
+  --accent: #F2A65A;
+  --surface: #FDF6EC;
+  --bg: #FFFBF5;
+  --text: #3D405B;
+  --text-secondary: #81839C;
+  --muted: #E8C8B8;
+  --error: #C0392B;
+  --font-heading: 'Nunito', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========== LAYOUT ========== */
+.app {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--muted);
+  z-index: 100;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.4s ease;
+  border-radius: 0 2px 2px 0;
+}
+.screen-container {
+  flex: 1;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px 20px 120px;
+}
+.screen {
+  width: 100%;
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.screen.slide-out-left {
+  opacity: 0;
+  transform: translateX(-30px);
+  position: absolute;
+}
+.screen.slide-in-right {
+  opacity: 0;
+  transform: translateX(30px);
+}
+.screen.slide-out-right {
+  opacity: 0;
+  transform: translateX(30px);
+  position: absolute;
+}
+.screen.slide-in-left {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+/* ========== TYPOGRAPHY ========== */
+.block-label {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.screen-title {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.screen-subtitle {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-bottom: 24px;
+}
+.question-label {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+.question-sublabel {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+.question-group {
+  margin-bottom: 28px;
+}
+.question-group:last-child { margin-bottom: 0; }
+.required-mark { color: var(--error); font-weight: 700; }
+
+/* ========== STACKED BAR (1-10) ========== */
+.stacked-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto;
+}
+.stacked-bar .segment {
+  height: 32px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 2px solid var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  position: relative;
+}
+.stacked-bar .segment:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+.stacked-bar .segment.filled {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.stacked-bar .segment.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  transform: scaleX(1.03);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.scale-label-top, .scale-label-bottom {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 280px;
+  margin: 4px auto;
+}
+.scale-label-top { margin-bottom: 6px; }
+.scale-label-bottom { margin-top: 6px; }
+
+/* ========== CHOICE CARDS ========== */
+.choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.choice-card {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+.choice-card:hover { border-color: var(--primary); }
+.choice-card.selected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  font-weight: 600;
+}
+
+/* ========== YES/NO BUTTONS ========== */
+.yesno-group {
+  display: flex;
+  gap: 12px;
+}
+.yesno-btn {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  transition: all 0.15s ease;
+  color: var(--text);
+}
+.yesno-btn:hover { border-color: var(--primary); }
+.yesno-btn.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ========== TEXT INPUT ========== */
+.text-input, .number-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 2px solid var(--muted);
+  background: var(--surface);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--text);
+  resize: none;
+  transition: border-color 0.2s;
+  outline: none;
+}
+.text-input:focus, .number-input:focus {
+  border-color: var(--primary);
+}
+.text-input { min-height: 100px; }
+.number-input {
+  max-width: 140px;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+.number-input::-webkit-inner-spin-button { opacity: 1; }
+
+/* ========== DROPDOWN ========== */
+.dropdown-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--muted);
+  background: var(--surface);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--text);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237A6A5E' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.dropdown-input:focus { border-color: var(--primary); }
+
+/* ========== PERCENTAGE ========== */
+.pct-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 300px;
+}
+.pct-container input[type="range"] {
+  flex: 1;
+  accent-color: var(--primary);
+  height: 6px;
+}
+.pct-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+  min-width: 50px;
+  text-align: right;
+}
+
+/* ========== CONDITIONAL TEXT ========== */
+.conditional-text {
+  margin-top: 12px;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+}
+.conditional-text.visible {
+  max-height: 200px;
+  opacity: 1;
+}
+
+/* ========== NAVIGATION ========== */
+.nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 20px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, var(--bg) 30%);
+  z-index: 50;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+.btn-back {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--muted);
+  background: var(--bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+.btn-back:hover { border-color: var(--primary); color: var(--text); }
+.btn-back.hidden { visibility: hidden; }
+.btn-back svg { width: 20px; height: 20px; }
+.btn-next {
+  flex: 1;
+  padding: 14px 24px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  opacity: 1;
+  transform: translateY(0);
+}
+.btn-next:hover { opacity: 0.9; }
+.btn-next:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-next.hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+.step-indicator {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  min-width: 44px;
+  text-align: center;
+}
+
+/* ========== WELCOME ========== */
+.welcome-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 48px;
+}
+.welcome-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.welcome-icon svg { width: 32px; height: 32px; color: #fff; }
+.welcome-content .screen-title { font-size: 1.75rem; margin-bottom: 4px; }
+.welcome-content .screen-subtitle { margin-bottom: 16px; }
+.welcome-desc {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+.welcome-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--surface);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+.confidential-box {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: left;
+  width: 100%;
+  margin-bottom: 20px;
+}
+.confidential-box h4 {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.confidential-box p {
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.privacy-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+.privacy-check input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+.privacy-check label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+/* ========== THEME SWITCHER ========== */
+.theme-switcher {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.theme-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.theme-dot:hover { transform: scale(1.15); }
+.theme-dot.active { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
+.theme-dot[data-theme="grounded"] { background: #8B5E3C; }
+.theme-dot[data-theme="simple"] { background: #4A90D9; }
+.theme-dot[data-theme="sunset"] { background: #E07A5F; }
+
+/* ========== BLOCK INTRO ========== */
+.block-intro {
+  padding: 20px 0 24px;
+  border-bottom: 2px solid var(--muted);
+  margin-bottom: 28px;
+}
+.block-number {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.block-intro .screen-title { font-size: 1.6rem; }
+
+/* ========== RADAR CHART ========== */
+.radar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 16px;
+}
+.radar-container canvas {
+  width: 340px;
+  height: 340px;
+}
+.radar-scores {
+  width: 100%;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.radar-score-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface);
+}
+.radar-score-label {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.radar-score-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+.radar-score-bar {
+  width: 60px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--muted);
+  overflow: hidden;
+}
+.radar-score-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+/* ========== THANK YOU ========== */
+.thankyou {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 64px;
+}
+.thankyou-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.thankyou-icon svg { width: 36px; height: 36px; color: #fff; }
+
+/* ========== ERROR STATES ========== */
+.input-error { border-color: var(--error) !important; }
+.error-msg {
+  color: var(--error);
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.shake { animation: shake 0.4s ease; }
+
+/* ========== REDUCED MOTION ========== */
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="screen-container" id="screenContainer"></div>
+  <div class="nav-bar" id="navBar">
+    <div class="nav-inner">
+      <button class="btn-back hidden" id="btnBack" aria-label="Vissza">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button class="btn-next" id="btnNext">Kezdjük</button>
+      <span class="step-indicator" id="stepIndicator"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== QUESTION DATA ==========
+const QUESTIONS = [
+  // === I. SZEMBENÉZÉS (11-20) ===
+  {id:'q11',block:'facing',type:'scale',label:'Mennyire vagy elégedett az életeddel összességében jelenleg?',scaleMin:'Egyáltalán nem elégedett',scaleMax:'Teljesen elégedett'},
+  {id:'q12',block:'facing',type:'choice',label:'Mikor pihented ki magad utoljára igazán – testileg és lelkileg egyaránt?',options:['Az elmúlt hétvégén','Az elmúlt hónapban','1–3 hónapja','Fél éve','Több mint egy éve','Nem emlékszem']},
+  {id:'q13',block:'facing',type:'yesno_text',label:'Van-e valami az életedben, amiről tudod, hogy változtatni kellene, de még nem tettél érte semmit?',textPrompt:'Mi az?'},
+  {id:'q14',block:'facing',type:'scale',label:'Mennyire tudod "letenni" a munkát, amikor nem vagy munkaidőben?',scaleMin:'Egyáltalán nem',scaleMax:'Teljesen le tudom tenni'},
+  {id:'q15',block:'facing',type:'choice',label:'Jársz-e rendszeresen terápiába, coachingra vagy valamilyen rendszeres belső fejlődési folyamatban veszel részt?',options:['Igen, jelenleg is','Voltam, de most nem','Próbáltam, de nem folytatom','Nem, de gondolkodom rajta','Nem']},
+  {id:'q16',block:'facing',type:'text',label:'Mi az, ami most a legtöbb energiádat elviszi – munkában és magánéletben?'},
+  {id:'q17',block:'facing',type:'choice',label:'Voltál-e már valaha burnout-ban, vagy közel érezted magad hozzá?',options:['Igen, többször is','Igen, egyszer átéltem','Közel voltam hozzá','Nem voltam, de érzem a kockázatot','Nem']},
+  {id:'q18',block:'facing',type:'text',label:'Milyen testi jelzéseket adsz magadnak, amikor túlterhelt vagy?',sublabel:'Pl. alvászavar, fejfájás, ingerlékenység, érzelmi elzárkózás…'},
+  {id:'q19',block:'facing',type:'number_yesno',label:'Mennyit alszol átlagosan?',numberLabel:'óra / éjszaka',yesnoLabel:'Elég-e ez számodra?'},
+  {id:'q20',block:'facing',type:'text',label:'Ha most őszintén végiggondolod: miben kellene a legtöbbet változtatnod az életedben?',required:true},
+
+  // === II. ÖNISMERET (21-30) ===
+  {id:'q21',block:'self',type:'scale',label:'Mennyire ismered a saját belső mintáidat – azokat az automatizmusokat, amelyek a reakcióidat vezérlik?',scaleMin:'Alig',scaleMax:'Nagyon jól ismerem'},
+  {id:'q22',block:'self',type:'text',label:'Milyen ismétlődő mintát veszel észre magadban, ami rendszeresen visszatér a munkádban vagy a kapcsolataidban?'},
+  {id:'q23',block:'self',type:'text',label:'Ki vagy te a vezető szerepeden kívül? Mi az, ami megmarad, ha félreteszed a pozíciód, a csapatod, a sikereidet?'},
+  {id:'q24',block:'self',type:'scale',label:'Mennyire hat rád mások véleménye a döntéseidben?',scaleMin:'Szinte egyáltalán nem',scaleMax:'Nagyon meghatározó'},
+  {id:'q25',block:'self',type:'text',label:'Mi az a belső hang vagy hiedelem, ami a leggyakrabban akadályoz?',sublabel:'Pl. "nem vagyok elég jó", "mindent nekem kell megcsinálni", "nem lehet megbízni másokban"'},
+  {id:'q26',block:'self',type:'yesno_text',label:'Volt-e életedben olyan meghatározó élmény vagy trauma, ami a mai napig befolyásolja, hogyan vezetsz?',textPrompt:'Megosztanád?',yesnoOptions:['Igen','Nem','Nem értem a kérdést']},
+  {id:'q27',block:'self',type:'scale',label:'Mennyire tudsz segítséget kérni, amikor szükséged lenne rá?',scaleMin:'Szinte soha',scaleMax:'Természetesen kérek segítséget'},
+  {id:'q28',block:'self',type:'text',label:'Miben vagy a legkritikusabb önmagaddal szemben?'},
+  {id:'q29',block:'self',type:'text',label:'Milyen belső erőforrásokra, értékekre, vezérlő elvekre támaszkodsz a legnehezebb pillanatokban?'},
+  {id:'q30',block:'self',type:'text',label:'Ha a legjobb barátod írná le, hogy milyen vezető vagy – mit mondana?',required:true},
+
+  // === III. PURPOSE (31-40) ===
+  {id:'q31',block:'purpose',type:'yesno_text',label:'Meg tudod fogalmazni egy-két mondatban az életed magasabb rendű célját – azt, amiért itt vagy?',textPrompt:'Mi az?'},
+  {id:'q32',block:'purpose',type:'scale',label:'Mennyire kapcsolódik a napi munkád ehhez a magasabb rendű célhoz?',scaleMin:'Egyáltalán nem',scaleMax:'Teljes mértékben'},
+  {id:'q33',block:'purpose',type:'text',label:'Mi motivál reggel felkelni?',sublabel:'Mi az, ami valóban hajt – nem a kötelességek, hanem a belső tűz?'},
+  {id:'q34',block:'purpose',type:'choice',label:'Gondolsz-e rendszeresen a halálra – arra, hogy az életed véges?',options:['Igen, ez aktívan formálja a döntéseimet','Néha eszembe jut','Ritkán','Inkább kerülöm ezt a gondolatot']},
+  {id:'q35',block:'purpose',type:'text',label:'Ha a mai napon meghalnál – mi lenne az, amit megbántál volna, hogy nem csináltál meg?'},
+  {id:'q36',block:'purpose',type:'scale',label:'Mennyire érzed, hogy a munkáddal valódi hatást teszel – nem csak eredményt érsz el?',scaleMin:'Nem érzem',scaleMax:'Erősen érzem'},
+  {id:'q37',block:'purpose',type:'yesno_text',label:'Van-e olyan valami, amiért dolgozol, és ami még az életeden is túlmutat?',textPrompt:'Mi az?'},
+  {id:'q38',block:'purpose',type:'text',label:'Mikor érezted utoljára azt, hogy teljesen a saját életedet éled – nem mások elvárásai szerint?'},
+  {id:'q39',block:'purpose',type:'text',label:'Mi az a döntés, amit eddig halogattál, mert túl nagy lett volna a változás?'},
+  {id:'q40',block:'purpose',type:'text',label:'Ha a halálos ágyadon elégedetten tekintesz vissza az életedre szeretteid körében, mire leszel büszke, mire gondolsz nagyon szívesen?',required:true},
+
+  // === IV. TÖRZS (41-50) ===
+  {id:'q41',block:'tribe',type:'yesno',label:'Van-e legalább egy ember az életedben, akivel az igazán nehéz, mély dolgokról tudsz őszintén beszélni?'},
+  {id:'q42',block:'tribe',type:'scale',label:'Mennyire érzed magad valóban megértettnek a közvetlen környezetedben – munkában és magánéletben?',scaleMin:'Egyáltalán nem',scaleMax:'Teljesen megértettnek érzem magam'},
+  {id:'q43',block:'tribe',type:'choice',label:'Hogyan jellemeznéd a kapcsolatodat a csapatoddal?',options:['Inkább hierarchikus, formális','Szakmai, de van emberi tartalom is','Valódi bizalom és nyitottság jellemzi','Közösségnek érzem, nem csak csapatnak']},
+  {id:'q44',block:'tribe',type:'choice',label:'Milyen gyakran van olyan megbeszélés a csapatodban, ahol valódi érzésekről, félelmekről, kihívásokról is szó esik – nemcsak feladatokról?',options:['Rendszeresen','Néha','Ritkán','Soha']},
+  {id:'q45',block:'tribe',type:'scale',label:'Mennyire érzel egyedüllétet a vezetői szerepedben?',scaleMin:'Egyáltalán nem',scaleMax:'Nagyon egyedül érzem magam',inverted:true},
+  {id:'q46',block:'tribe',type:'text',label:'Kik alkotják a te "törzsed" – azok az emberek, akik valóban ismernek, elfogadnak és fejlesztenek?'},
+  {id:'q47',block:'tribe',type:'scale',label:'Mennyire van körülötted olyan közösség, ahol nem kell megfelelned, hanem lehetsz önmagad?',scaleMin:'Nincs ilyen',scaleMax:'Teljes mértékben van ilyen'},
+  {id:'q48',block:'tribe',type:'text',label:'Mi az a vezető szereped mögött, ami a legkevésbé látszik kívülről?'},
+  {id:'q49',block:'tribe',type:'text',label:'Hogyan kezeled a konfliktusokat a csapatodban – és saját magaddal?'},
+  {id:'q50',block:'tribe',type:'text',label:'Mit adnál meg a csapatodnak, ha pénz és idő nem lenne akadály?',required:true},
+
+  // === V. TUDATOSSÁG (51-60) ===
+  {id:'q51',block:'consciousness',type:'scale',label:'Mennyire vagy tudatosan jelen a fontos pillanatokban – munkahelyen és magánéletben egyaránt?',scaleMin:'Szinte soha nem vagyok jelen',scaleMax:'Rendszeresen teljes és tudatos jelenléttel élek'},
+  {id:'q52',block:'consciousness',type:'text',label:'Milyen rendszeres gyakorlatod van a belső megújulásra?',sublabel:'Pl. meditáció, sport, természet, elvonulás, naplóírás, ima, terápia…'},
+  {id:'q53',block:'consciousness',type:'scale',label:'Mennyire tudod lassítani a tempódat, amikor szükséged lenne rá?',scaleMin:'Egyáltalán nem',scaleMax:'Tudatosan és könnyen'},
+  {id:'q54',block:'consciousness',type:'text',label:'Mikor voltál utoljára teljesen "flow" állapotban – teljesen elmerülve valamiben, ahol az idő és az egó mintha megszűnne?'},
+  {id:'q55',block:'consciousness',type:'percentage',label:'Milyen arányban töltöd az idődet olyan dolgokkal, amelyek valóban feltöltenek – versus amelyek csak szükségesek?',sublabel:'Feltöltő tevékenységek aránya'},
+  {id:'q56',block:'consciousness',type:'choice',label:'Van-e rendszeres elvonulás gyakorlatod – akár rövid (meditáció), akár hosszabb (retreat)?',options:['Igen, rendszeresen','Alkalmanként','Tervezem, de még nem csináltam','Nem, és nem is hiányzik','Nem, de hiányzik']},
+  {id:'q57',block:'consciousness',type:'text',label:'Hogyan kezeled a bizonytalanságot és a kontroll elvesztésének érzését?'},
+  {id:'q58',block:'consciousness',type:'text',label:'Mi az, amiről tudod, hogy jót tenne, de rendszeresen elhalasztod?'},
+  {id:'q59',block:'consciousness',type:'scale',label:'Mennyire hiszel abban, hogy a belső fejlődés és a vezetői teljesítmény összefüggnek?',scaleMin:'Nem hiszek benne',scaleMax:'Teljesen meg vagyok győződve'},
+  {id:'q60',block:'consciousness',type:'text',label:'Mi az egy dolog, amit – ha elindítanál most – a legnagyobb változást hozná az életedbe?',required:true},
+
+  // === ADATLAP (1-10) ===
+  {id:'q1',block:'demographics',type:'text',label:'Mi a jelenlegi szereped?',sublabel:'Pl. CEO, ügyvezetői igazgató, osztályvezető, tulajdonos-vezető…',required:true},
+  {id:'q2',block:'demographics',type:'text',label:'Melyik iparágban dolgozol?'},
+  {id:'q3',block:'demographics',type:'choice',label:'Hány főt vezetsz közvetlenül?',options:['1–5 fő','6–15 fő','16–50 fő','51–200 fő','200 fő felett']},
+  {id:'q4',block:'demographics',type:'number',label:'Hány éve vagy vezető pozícióban?'},
+  {id:'q6',block:'demographics',type:'choice',label:'Milyen típusú a szervezeted?',options:['Magánvállalkozás (tulajdonos-vezető)','Menedzseri pozíció nagyvállalatnál','Startup','Nonprofit / civil','Közszféra','Egyéb']},
+  {id:'q7',block:'demographics',type:'dropdown',label:'Melyik országban dolgozol elsősorban?',options:['Magyarország','Ausztria','Németország','Svájc','Románia','Szlovákia','Szerbia','Horvátország','Csehország','Lengyelország','Egyesült Királyság','Egyesült Államok','Egyéb']},
+  {id:'q8',block:'demographics',type:'number',label:'Hány éves vagy?'},
+  {id:'q9',block:'demographics',type:'choice',label:'Mi a legmagasabb iskolai végzettséged?',options:['Főiskola / BA','Egyetem / MA','PhD','MBA','Egyéb']},
+  {id:'q10',block:'demographics',type:'yesno',label:'Szeretnél-e minderről mélyebben beszélni valakivel?'},
+];
+
+const BLOCKS = {
+  facing: {num:'I.',title:'Szembenézés',subtitle:'"Hogy vagy valójában?"'},
+  self: {num:'II.',title:'Önismeret',subtitle:'"Ki vagy a szereped mögött?"'},
+  purpose: {num:'III.',title:'Purpose',subtitle:'"Miért csinálod?"'},
+  tribe: {num:'IV.',title:'Törzs',subtitle:'"Kivel csinálod?"'},
+  consciousness: {num:'V.',title:'Tudatosság, Jelenlét és Megújulás',subtitle:'"Hogyan csinálod – és hogyan töltődsz fel?"'},
+  demographics: {num:'',title:'Adatlap',subtitle:'Összehasonlítható háttéradatok'},
+};
+
+// ========== SCREEN DEFINITIONS ==========
+const SCREENS = [
+  {id:'welcome',type:'welcome'},
+  {id:'s2',type:'questions',blockIntro:'facing',questions:['q11','q12']},
+  {id:'s3',type:'questions',questions:['q13','q14','q15']},
+  {id:'s4',type:'questions',questions:['q16','q17','q18']},
+  {id:'s5',type:'questions',questions:['q19','q20']},
+  {id:'s6',type:'questions',blockIntro:'self',questions:['q21','q22']},
+  {id:'s7',type:'questions',questions:['q23','q24','q25']},
+  {id:'s8',type:'questions',questions:['q26','q27','q28']},
+  {id:'s9',type:'questions',questions:['q29','q30']},
+  {id:'s10',type:'questions',blockIntro:'purpose',questions:['q31','q32']},
+  {id:'s11',type:'questions',questions:['q33','q34','q35']},
+  {id:'s12',type:'questions',questions:['q36','q37','q38']},
+  {id:'s13',type:'questions',questions:['q39','q40']},
+  {id:'s14',type:'questions',blockIntro:'tribe',questions:['q41','q42','q43']},
+  {id:'s15',type:'questions',questions:['q44','q45','q46']},
+  {id:'s16',type:'questions',questions:['q47','q48','q49','q50']},
+  {id:'s17',type:'questions',blockIntro:'consciousness',questions:['q51','q52','q53']},
+  {id:'s18',type:'questions',questions:['q54','q55','q56']},
+  {id:'s19',type:'questions',questions:['q57','q58','q59','q60']},
+  {id:'radar',type:'radar'},
+  {id:'s21',type:'questions',blockIntro:'demographics',questions:['q1','q2','q3']},
+  {id:'s22',type:'questions',questions:['q4','q6']},
+  {id:'s23',type:'questions',questions:['q7','q8','q9']},
+  {id:'s24',type:'questions',questions:['q10']},
+  {id:'thankyou',type:'thankyou'},
+];
+
+// ========== STATE ==========
+const state = {
+  currentScreen: 0,
+  privacyAccepted: false,
+  startedAt: null,
+  responses: {},
+  theme: 'grounded',
+};
+
+const qMap = {};
+QUESTIONS.forEach(q => qMap[q.id] = q);
+
+// ========== HELPERS ==========
+function $(sel, ctx) { return (ctx||document).querySelector(sel); }
+function $$(sel, ctx) { return [...(ctx||document).querySelectorAll(sel)]; }
+
+function getR(id) { return state.responses[id]; }
+function setR(id, val) {
+  state.responses[id] = val;
+  saveDraft();
+}
+
+function saveDraft() {
+  try { localStorage.setItem('wellbeing_draft', JSON.stringify(state)); } catch(e) {}
+}
+
+function loadDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem('wellbeing_draft'));
+    if (d && d.responses) {
+      Object.assign(state, d);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// ========== AUTO-ADVANCE ==========
+// Determines if a screen consists only of auto-advance question types
+function isAutoAdvanceScreen(screenDef) {
+  if (screenDef.type !== 'questions') return false;
+  const qs = screenDef.questions.map(id => qMap[id]);
+  return qs.every(q => ['scale','choice','yesno'].includes(q.type));
+}
+
+// Check if ALL questions on a screen that are auto-advance types have values
+function allAutoQuestionsAnswered(screenDef) {
+  if (!screenDef.questions) return false;
+  const qs = screenDef.questions.map(id => qMap[id]);
+  return qs.every(q => {
+    if (['scale','choice','yesno'].includes(q.type)) {
+      return getR(q.id) !== undefined && getR(q.id) !== null && getR(q.id) !== '';
+    }
+    return true; // non-auto types don't block
+  });
+}
+
+function scheduleAutoAdvance(screenDef) {
+  if (isAutoAdvanceScreen(screenDef) && allAutoQuestionsAnswered(screenDef)) {
+    setTimeout(() => {
+      // Re-check in case user navigated away
+      if (SCREENS[state.currentScreen] === screenDef && allAutoQuestionsAnswered(screenDef)) {
+        goNext();
+      }
+    }, 400);
+  }
+}
+
+// ========== RENDERERS ==========
+function renderScale(q) {
+  const val = getR(q.id);
+  let html = `<div class="scale-label-top">${q.scaleMax||'10'}</div>`;
+  html += `<div class="stacked-bar" data-qid="${q.id}">`;
+  for (let i = 10; i >= 1; i--) {
+    const filled = val !== undefined && i <= val;
+    const selected = val === i;
+    html += `<div class="segment${filled?' filled':''}${selected?' selected':''}" data-val="${i}">${i}</div>`;
+  }
+  html += `</div><div class="scale-label-bottom">${q.scaleMin||'1'}</div>`;
+  return html;
+}
+
+function renderChoice(q) {
+  const val = getR(q.id);
+  let html = `<div class="choice-list" data-qid="${q.id}">`;
+  q.options.forEach((opt, i) => {
+    html += `<div class="choice-card${val===opt?' selected':''}" data-val="${opt}">${opt}</div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function renderText(q) {
+  const val = getR(q.id) || '';
+  return `<textarea class="text-input" data-qid="${q.id}" placeholder="Írd ide a válaszod…" rows="3">${val}</textarea>`;
+}
+
+function renderNumber(q) {
+  const val = getR(q.id) || '';
+  return `<input type="number" class="number-input" data-qid="${q.id}" inputmode="numeric" value="${val}" placeholder="—">`;
+}
+
+function renderYesNo(q) {
+  const val = getR(q.id);
+  const opts = q.yesnoOptions || ['Igen','Nem'];
+  let html = `<div class="yesno-group" data-qid="${q.id}">`;
+  opts.forEach(opt => {
+    html += `<button class="yesno-btn${val===opt?' selected':''}" data-val="${opt}">${opt}</button>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function renderYesNoText(q) {
+  const val = getR(q.id);
+  const textVal = getR(q.id+'_text') || '';
+  const opts = q.yesnoOptions || ['Igen','Nem'];
+  const showText = val === 'Igen' || val === opts[0];
+  let html = `<div class="yesno-group" data-qid="${q.id}">`;
+  opts.forEach(opt => {
+    html += `<button class="yesno-btn${val===opt?' selected':''}" data-val="${opt}">${opt}</button>`;
+  });
+  html += `</div>`;
+  html += `<div class="conditional-text${showText?' visible':''}" data-cond="${q.id}">`;
+  html += `<div class="question-sublabel">${q.textPrompt||'Kifejtés:'}</div>`;
+  html += `<textarea class="text-input" data-qid="${q.id}_text" placeholder="Írd ide…" rows="3">${textVal}</textarea>`;
+  html += `</div>`;
+  return html;
+}
+
+function renderNumberYesNo(q) {
+  const numVal = getR(q.id+'_num') || '';
+  const ynVal = getR(q.id+'_yn');
+  let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">`;
+  html += `<input type="number" class="number-input" data-qid="${q.id}_num" inputmode="decimal" step="0.5" value="${numVal}" placeholder="—">`;
+  html += `<span style="color:var(--text-secondary);font-size:0.9rem;">${q.numberLabel||''}</span>`;
+  html += `</div>`;
+  html += `<div class="question-sublabel">${q.yesnoLabel||''}</div>`;
+  html += `<div class="yesno-group" data-qid="${q.id}_yn">`;
+  ['Igen','Nem'].forEach(opt => {
+    html += `<button class="yesno-btn${ynVal===opt?' selected':''}" data-val="${opt}">${opt}</button>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function renderDropdown(q) {
+  const val = getR(q.id) || '';
+  let html = `<select class="dropdown-input" data-qid="${q.id}"><option value="">Válassz…</option>`;
+  q.options.forEach(opt => {
+    html += `<option value="${opt}"${val===opt?' selected':''}>${opt}</option>`;
+  });
+  html += `</select>`;
+  return html;
+}
+
+function renderPercentage(q) {
+  const val = getR(q.id) ?? 50;
+  return `<div class="pct-container"><input type="range" min="0" max="100" value="${val}" data-qid="${q.id}"><span class="pct-value">${val}%</span></div>`;
+}
+
+function renderQuestion(q) {
+  const reqMark = q.required ? ' <span class="required-mark">*</span>' : '';
+  let html = `<div class="question-group" data-group="${q.id}">`;
+  html += `<div class="question-label">${q.label}${reqMark}</div>`;
+  if (q.sublabel) html += `<div class="question-sublabel">${q.sublabel}</div>`;
+  switch(q.type) {
+    case 'scale': html += renderScale(q); break;
+    case 'choice': html += renderChoice(q); break;
+    case 'text': html += renderText(q); break;
+    case 'number': html += renderNumber(q); break;
+    case 'yesno': html += renderYesNo(q); break;
+    case 'yesno_text': html += renderYesNoText(q); break;
+    case 'number_yesno': html += renderNumberYesNo(q); break;
+    case 'dropdown': html += renderDropdown(q); break;
+    case 'percentage': html += renderPercentage(q); break;
+  }
+  html += `</div>`;
+  return html;
+}
+
+// ========== SCREEN RENDERERS ==========
+function renderWelcome() {
+  return `
+    <div class="welcome-content">
+      <div class="welcome-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+      </div>
+      <div class="screen-title">Vezetői Jóllét</div>
+      <div class="screen-subtitle">Szűrés</div>
+      <div class="welcome-desc">Egy rövid, fókuszált önvizsgálat, kifejezetten vezetői szerepekre tervezve. Öt dimenzióban vizsgáljuk a jelenlegi állapotodat.</div>
+      <div class="welcome-badge">~15 perc</div>
+      <div class="theme-switcher">
+        <div class="theme-dot${state.theme==='grounded'?' active':''}" data-theme="grounded" title="Grounded"></div>
+        <div class="theme-dot${state.theme==='simple'?' active':''}" data-theme="simple" title="Simple"></div>
+        <div class="theme-dot${state.theme==='sunset'?' active':''}" data-theme="sunset" title="Sunset"></div>
+      </div>
+      <div class="confidential-box">
+        <h4>Szigorúan bizalmas</h4>
+        <p>Válaszaidat anonimizálva, biztonságosan tároljuk. Az adatokat kizárólag a személyes visszajelzésedhez és összesített szervezeti egészségmutatókhoz használjuk.</p>
+      </div>
+      <label class="privacy-check">
+        <input type="checkbox" id="privacyCheck" ${state.privacyAccepted?'checked':''}>
+        <span>Megértettem, hogy ez egy bizalmas felmérés, és elfogadom az adatkezelési feltételeket.</span>
+      </label>
+    </div>`;
+}
+
+function renderRadar() {
+  const scores = computeScores();
+  const labels = [
+    {key:'facing',label:'Szembenézés'},
+    {key:'self',label:'Önismeret'},
+    {key:'purpose',label:'Purpose'},
+    {key:'tribe',label:'Törzs'},
+    {key:'consciousness',label:'Tudatosság'},
+  ];
+  let scoreRows = '';
+  labels.forEach(l => {
+    const s = scores[l.key];
+    const pct = (s/10*100).toFixed(0);
+    scoreRows += `
+      <div class="radar-score-row">
+        <span class="radar-score-label">${l.label}</span>
+        <div class="radar-score-bar"><div class="radar-score-bar-fill" style="width:${pct}%"></div></div>
+        <span class="radar-score-value">${s.toFixed(1)}</span>
+      </div>`;
+  });
+  return `
+    <div class="radar-container">
+      <div class="block-number">Eredményeid</div>
+      <div class="screen-title" style="text-align:center;">Jóllét térkép</div>
+      <div class="screen-subtitle" style="text-align:center;">Az 5 dimenzió összesítése a skálás válaszaid alapján</div>
+      <canvas id="radarCanvas" width="680" height="680"></canvas>
+      <div class="radar-scores">${scoreRows}</div>
+    </div>`;
+}
+
+function renderThankYou() {
+  return `
+    <div class="thankyou">
+      <div class="thankyou-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <div class="screen-title">Köszönjük!</div>
+      <div class="screen-subtitle">A válaszaid rögzítésre kerültek.</div>
+      <div class="welcome-desc" style="margin-top:16px;">Amennyiben jelezted, hogy szeretnél mélyebben beszélni valakivel, hamarosan felvesszük veled a kapcsolatot.</div>
+    </div>`;
+}
+
+// ========== SCORING ==========
+function computeScores() {
+  const cfg = {
+    facing: ['q11','q14'],
+    self: ['q21','q24','q27'],
+    purpose: ['q32','q36'],
+    tribe: ['q42','q45','q47'],
+    consciousness: ['q51','q53','q59'],
+  };
+  const scores = {};
+  for (const [block, ids] of Object.entries(cfg)) {
+    let sum = 0, count = 0;
+    ids.forEach(id => {
+      let v = getR(id);
+      if (v !== undefined && v !== null) {
+        v = Number(v);
+        if (qMap[id] && qMap[id].inverted) v = 11 - v;
+        sum += v;
+        count++;
+      }
+    });
+    scores[block] = count > 0 ? sum / count : 5;
+  }
+  return scores;
+}
+
+function drawRadar() {
+  const canvas = document.getElementById('radarCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2, R = W*0.3;
+  const scores = computeScores();
+  const labels = ['facing','self','purpose','tribe','consciousness'];
+  const labelNames = [['Szembe-','nézés'],['Ön-','ismeret'],['Purpose'],['Törzs'],['Tudatos-','ság']];
+  const n = labels.length;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Grid
+  const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+  const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text').trim();
+
+  for (let ring = 2; ring <= 10; ring += 2) {
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const angle = (Math.PI * 2 * i / n) - Math.PI/2;
+      const r = R * ring / 10;
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = mutedColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Axes
+  for (let i = 0; i < n; i++) {
+    const angle = (Math.PI * 2 * i / n) - Math.PI/2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + R * Math.cos(angle), cy + R * Math.sin(angle));
+    ctx.strokeStyle = mutedColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Data polygon
+  ctx.beginPath();
+  labels.forEach((key, i) => {
+    const angle = (Math.PI * 2 * i / n) - Math.PI/2;
+    const r = R * scores[key] / 10;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = accentColor + '33';
+  ctx.fill();
+  ctx.strokeStyle = accentColor;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Data points
+  labels.forEach((key, i) => {
+    const angle = (Math.PI * 2 * i / n) - Math.PI/2;
+    const r = R * scores[key] / 10;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI*2);
+    ctx.fillStyle = accentColor;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  // Labels
+  const fontSize = 18;
+  ctx.font = '500 ' + fontSize + 'px ' + getComputedStyle(document.documentElement).getPropertyValue('--font-body').trim();
+  ctx.fillStyle = textColor;
+  labels.forEach((key, i) => {
+    const angle = (Math.PI * 2 * i / n) - Math.PI/2;
+    const lr = R + 36;
+    let x = cx + lr * Math.cos(angle);
+    let y = cy + lr * Math.sin(angle);
+    if (Math.abs(Math.cos(angle)) < 0.1) {
+      ctx.textAlign = 'center';
+    } else if (Math.cos(angle) > 0) {
+      ctx.textAlign = 'left';
+    } else {
+      ctx.textAlign = 'right';
+    }
+    const lines = labelNames[i];
+    const lineHeight = fontSize * 1.3;
+    const startY = y - (lines.length - 1) * lineHeight / 2;
+    lines.forEach((line, li) => {
+      ctx.fillText(line, x, startY + li * lineHeight);
+    });
+  });
+}
+
+// ========== RENDER SCREEN ==========
+function renderScreen(index) {
+  const def = SCREENS[index];
+  let html = '';
+
+  if (def.type === 'welcome') {
+    html = renderWelcome();
+  } else if (def.type === 'radar') {
+    html = renderRadar();
+  } else if (def.type === 'thankyou') {
+    html = renderThankYou();
+  } else {
+    if (def.blockIntro) {
+      const b = BLOCKS[def.blockIntro];
+      html += `<div class="block-intro">`;
+      html += `<div class="block-number">${b.num} blokk</div>`;
+      html += `<div class="screen-title">${b.title}</div>`;
+      html += `<div class="screen-subtitle">${b.subtitle}</div>`;
+      html += `</div>`;
+    }
+    def.questions.forEach(qid => {
+      html += renderQuestion(qMap[qid]);
+    });
+  }
+  return html;
+}
+
+// ========== NAVIGATION ==========
+function updateProgress() {
+  const pct = (state.currentScreen / (SCREENS.length - 1) * 100).toFixed(1);
+  $('#progressFill').style.width = pct + '%';
+}
+
+function updateNav() {
+  const def = SCREENS[state.currentScreen];
+  const btnBack = $('#btnBack');
+  const btnNext = $('#btnNext');
+  const stepInd = $('#stepIndicator');
+
+  // Back button
+  btnBack.classList.toggle('hidden', state.currentScreen === 0);
+
+  // Step indicator
+  if (def.type === 'welcome' || def.type === 'thankyou') {
+    stepInd.textContent = '';
+  } else {
+    stepInd.textContent = `${state.currentScreen} / ${SCREENS.length - 2}`;
+  }
+
+  // Next button logic
+  if (def.type === 'welcome') {
+    btnNext.textContent = 'Kezdjük';
+    btnNext.classList.remove('hidden');
+    btnNext.disabled = !state.privacyAccepted;
+  } else if (def.type === 'thankyou') {
+    btnNext.classList.add('hidden');
+  } else if (def.type === 'radar') {
+    btnNext.textContent = 'Tovább az adatlapra';
+    btnNext.classList.remove('hidden');
+    btnNext.disabled = false;
+  } else if (state.currentScreen === SCREENS.length - 2) {
+    // Last question screen before thank you
+    btnNext.textContent = 'Beküldés';
+    btnNext.classList.remove('hidden');
+    btnNext.disabled = false;
+  } else if (isAutoAdvanceScreen(def)) {
+    // Auto-advance screens: hide next button
+    btnNext.classList.add('hidden');
+  } else {
+    btnNext.textContent = 'Tovább';
+    btnNext.classList.remove('hidden');
+    btnNext.disabled = false;
+  }
+}
+
+function showScreen(index, direction) {
+  const container = $('#screenContainer');
+  const oldScreen = container.querySelector('.screen');
+
+  const newDiv = document.createElement('div');
+  newDiv.className = 'screen';
+  newDiv.innerHTML = renderScreen(index);
+
+  // Remove old screen immediately (no overlapping scroll issues)
+  if (oldScreen) oldScreen.remove();
+
+  container.scrollTop = 0;
+  container.appendChild(newDiv);
+
+  // Animate in
+  if (direction) {
+    newDiv.classList.add(direction === 'forward' ? 'slide-in-right' : 'slide-in-left');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        newDiv.classList.remove('slide-in-right', 'slide-in-left');
+      });
+    });
+  }
+
+  // Setup event listeners for new screen
+  setTimeout(() => {
+    setupScreenListeners();
+    if (SCREENS[index].type === 'radar') drawRadar();
+  }, 20);
+
+  state.currentScreen = index;
+  updateProgress();
+  updateNav();
+  saveDraft();
+}
+
+function validateScreen() {
+  const def = SCREENS[state.currentScreen];
+  if (def.type !== 'questions') return true;
+
+  let valid = true;
+  def.questions.forEach(qid => {
+    const q = qMap[qid];
+    if (!q.required) return;
+    const val = getR(qid);
+    const group = $(`[data-group="${qid}"]`);
+    if (!group) return;
+
+    let isEmpty = val === undefined || val === null || val === '';
+    if (q.type === 'text' && typeof val === 'string') isEmpty = val.trim().length < 2;
+
+    if (isEmpty) {
+      valid = false;
+      group.classList.add('shake');
+      const input = group.querySelector('.text-input, .number-input');
+      if (input) input.classList.add('input-error');
+      setTimeout(() => group.classList.remove('shake'), 500);
+    }
+  });
+  return valid;
+}
+
+function goNext() {
+  if (state.currentScreen === 0 && !state.privacyAccepted) return;
+  if (!validateScreen()) return;
+
+  if (state.currentScreen === 0) {
+    state.startedAt = Date.now();
+  }
+
+  // Submit on last question screen
+  if (state.currentScreen === SCREENS.length - 2) {
+    submitResponses();
+  }
+
+  if (state.currentScreen < SCREENS.length - 1) {
+    showScreen(state.currentScreen + 1, 'forward');
+  }
+}
+
+function goBack() {
+  if (state.currentScreen > 0) {
+    showScreen(state.currentScreen - 1, 'back');
+  }
+}
+
+// ========== SUBMISSION ==========
+async function submitResponses() {
+  const payload = {
+    submittedAt: new Date().toISOString(),
+    startedAt: state.startedAt ? new Date(state.startedAt).toISOString() : null,
+    durationSeconds: state.startedAt ? Math.round((Date.now() - state.startedAt) / 1000) : null,
+    scores: computeScores(),
+    responses: state.responses,
+  };
+
+  // TODO: Replace with actual Google Apps Script URL
+  const ENDPOINT = null;
+
+  if (ENDPOINT) {
+    try {
+      await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+    } catch(e) {
+      console.log('Submission failed, data saved locally:', payload);
+    }
+  }
+
+  // Always log payload for debugging
+  console.log('Survey payload:', JSON.stringify(payload, null, 2));
+
+  // Clear draft
+  try { localStorage.removeItem('wellbeing_draft'); } catch(e) {}
+}
+
+// ========== EVENT LISTENERS ==========
+function setupScreenListeners() {
+  const def = SCREENS[state.currentScreen];
+
+  // Theme dots
+  $$('.theme-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      state.theme = dot.dataset.theme;
+      document.documentElement.setAttribute('data-theme', state.theme);
+      $$('.theme-dot').forEach(d => d.classList.toggle('active', d.dataset.theme === state.theme));
+      saveDraft();
+    });
+  });
+
+  // Privacy checkbox
+  const privCheck = $('#privacyCheck');
+  if (privCheck) {
+    privCheck.addEventListener('change', () => {
+      state.privacyAccepted = privCheck.checked;
+      $('#btnNext').disabled = !state.privacyAccepted;
+    });
+  }
+
+  // Stacked bar segments
+  $$('.stacked-bar').forEach(bar => {
+    const qid = bar.dataset.qid;
+    bar.querySelectorAll('.segment').forEach(seg => {
+      seg.addEventListener('click', () => {
+        const val = parseInt(seg.dataset.val);
+        setR(qid, val);
+        // Update visual
+        bar.querySelectorAll('.segment').forEach(s => {
+          const sv = parseInt(s.dataset.val);
+          s.classList.toggle('filled', sv <= val);
+          s.classList.toggle('selected', sv === val);
+        });
+        scheduleAutoAdvance(def);
+      });
+    });
+  });
+
+  // Choice cards
+  $$('.choice-list').forEach(list => {
+    const qid = list.dataset.qid;
+    list.querySelectorAll('.choice-card').forEach(card => {
+      card.addEventListener('click', () => {
+        setR(qid, card.dataset.val);
+        list.querySelectorAll('.choice-card').forEach(c => c.classList.toggle('selected', c === card));
+        scheduleAutoAdvance(def);
+      });
+    });
+  });
+
+  // Yes/No buttons (simple)
+  $$('.yesno-group').forEach(group => {
+    const qid = group.dataset.qid;
+    group.querySelectorAll('.yesno-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setR(qid, btn.dataset.val);
+        group.querySelectorAll('.yesno-btn').forEach(b => b.classList.toggle('selected', b === btn));
+
+        // Handle conditional text
+        const cond = $(`[data-cond="${qid}"]`);
+        if (cond) {
+          const baseQ = qMap[qid];
+          const opts = baseQ?.yesnoOptions || ['Igen','Nem'];
+          const showText = btn.dataset.val === 'Igen' || btn.dataset.val === opts[0];
+          cond.classList.toggle('visible', showText);
+        }
+
+        // Auto-advance for simple yesno (not yesno_text)
+        const q = qMap[qid];
+        if (q && q.type === 'yesno') {
+          scheduleAutoAdvance(def);
+        }
+      });
+    });
+  });
+
+  // Text inputs
+  $$('.text-input').forEach(ta => {
+    ta.addEventListener('input', () => {
+      setR(ta.dataset.qid, ta.value);
+      ta.classList.remove('input-error');
+      // Auto-resize
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    });
+  });
+
+  // Number inputs
+  $$('.number-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      setR(inp.dataset.qid, inp.value);
+      inp.classList.remove('input-error');
+    });
+  });
+
+  // Dropdown
+  $$('.dropdown-input').forEach(sel => {
+    sel.addEventListener('change', () => {
+      setR(sel.dataset.qid, sel.value);
+    });
+  });
+
+  // Percentage slider
+  $$('.pct-container input[type="range"]').forEach(slider => {
+    const valSpan = slider.parentElement.querySelector('.pct-value');
+    slider.addEventListener('input', () => {
+      setR(slider.dataset.qid, parseInt(slider.value));
+      valSpan.textContent = slider.value + '%';
+    });
+  });
+}
+
+// ========== INIT ==========
+function init() {
+  const hasDraft = loadDraft();
+
+  // Apply theme
+  document.documentElement.setAttribute('data-theme', state.theme);
+
+  // Show first screen or resume
+  if (hasDraft && state.currentScreen > 0) {
+    showScreen(state.currentScreen, 'forward');
+  } else {
+    showScreen(0, 'forward');
+  }
+
+  // Nav button listeners
+  $('#btnNext').addEventListener('click', goNext);
+  $('#btnBack').addEventListener('click', goBack);
+
+  // Keyboard: Enter to advance on text screens
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      const active = document.activeElement;
+      if (active && active.tagName === 'TEXTAREA') return; // Allow newlines in textarea
+      goNext();
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
