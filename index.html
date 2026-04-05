@@ -821,14 +821,14 @@ function scheduleAutoAdvance(screenDef) {
 // ========== RENDERERS ==========
 function renderScale(q) {
   const val = getR(q.id);
-  let html = `<div class="scale-label-top">${q.scaleMax||'10'}</div>`;
+  let html = `<div class="scale-label-top">${q.scaleMin||'1'}</div>`;
   html += `<div class="stacked-bar" data-qid="${q.id}">`;
-  for (let i = 10; i >= 1; i--) {
+  for (let i = 1; i <= 10; i++) {
     const filled = val !== undefined && i <= val;
     const selected = val === i;
     html += `<div class="segment${filled?' filled':''}${selected?' selected':''}" data-val="${i}">${i}</div>`;
   }
-  html += `</div><div class="scale-label-bottom">${q.scaleMin||'1'}</div>`;
+  html += `</div><div class="scale-label-bottom">${q.scaleMax||'10'}</div>`;
   return html;
 }
 
