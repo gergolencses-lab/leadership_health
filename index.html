@@ -633,6 +633,25 @@ body {
 }
 .thankyou-icon svg { width: 36px; height: 36px; color: #fff; }
 
+/* ========== RESTART BUTTON ========== */
+.btn-restart {
+  margin-top: 24px;
+  padding: 12px 32px;
+  border-radius: 10px;
+  border: 2px solid var(--muted);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-restart:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 /* ========== ERROR STATES ========== */
 .input-error { border-color: var(--error) !important; }
 .error-msg {
@@ -1034,6 +1053,7 @@ function renderThankYou() {
       <div class="screen-title">Köszönjük!</div>
       <div class="screen-subtitle">A válaszaid rögzítésre kerültek.</div>
       <div class="welcome-desc" style="margin-top:16px;">Amennyiben jelezted, hogy szeretnél mélyebben beszélni valakivel, hamarosan felvesszük veled a kapcsolatot.</div>
+      <button class="btn-restart" onclick="localStorage.clear();location.reload();">Újrakezdés</button>
     </div>`;
 }
 
