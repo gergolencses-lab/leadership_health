@@ -546,6 +546,19 @@ body {
 .theme-dot[data-theme="simple"] { background: #4A90D9; }
 .theme-dot[data-theme="sunset"] { background: #E07A5F; }
 
+/* ========== BLOCK BADGE (non-intro screens) ========== */
+.block-badge {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  padding: 6px 0 16px;
+  border-bottom: 1px solid var(--muted);
+  margin-bottom: 20px;
+}
+
 /* ========== BLOCK INTRO ========== */
 .block-intro {
   padding: 20px 0 24px;
@@ -1203,6 +1216,15 @@ function renderScreen(index) {
       html += `<div class="screen-title">${b.title}</div>`;
       html += `<div class="screen-subtitle">${b.subtitle}</div>`;
       html += `</div>`;
+    } else {
+      // Show small block badge on non-intro screens
+      const firstQ = qMap[def.questions[0]];
+      if (firstQ) {
+        const b = BLOCKS[firstQ.block];
+        if (b && b.num) {
+          html += `<div class="block-badge">${b.num} ${b.title}</div>`;
+        }
+      }
     }
     def.questions.forEach(qid => {
       html += renderQuestion(qMap[qid]);
