@@ -163,55 +163,86 @@ body {
 .question-group:last-child { margin-bottom: 0; }
 .required-mark { color: var(--error); font-weight: 700; }
 
-/* ========== STACKED BAR (1-10) ========== */
-.stacked-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+/* ========== SCALE SLIDER (1-10) ========== */
+.scale-slider-container {
   width: 100%;
-  max-width: 280px;
+  max-width: 340px;
   margin: 0 auto;
+  padding: 0 4px;
 }
-.stacked-bar .segment {
-  height: 32px;
-  border-radius: 6px;
-  background: var(--surface);
-  border: 2px solid var(--muted);
+.scale-value-display {
+  text-align: center;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 8px;
+  min-height: 2.8rem;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.scale-value-display.empty {
+  color: var(--muted);
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+.scale-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #e74c3c, #f39c12 40%, #f1c40f 55%, #2ecc71 100%);
+  outline: none;
   cursor: pointer;
-  transition: all 0.15s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  position: relative;
+  margin: 8px 0;
 }
-.stacked-bar .segment:hover {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
-}
-.stacked-bar .segment.filled {
+.scale-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: transform 0.15s, box-shadow 0.15s;
 }
-.stacked-bar .segment.selected {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  transform: scaleX(1.03);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent);
+.scale-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.2);
 }
-.scale-label-top, .scale-label-bottom {
+.scale-slider::-moz-range-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.scale-ticks {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px;
+  margin-top: 2px;
+}
+.scale-ticks span {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  width: 20px;
+  text-align: center;
+}
+.scale-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.scale-labels span {
   font-size: 0.75rem;
   color: var(--text-secondary);
-  text-align: center;
-  max-width: 280px;
-  margin: 4px auto;
+  max-width: 40%;
 }
-.scale-label-top { margin-bottom: 6px; }
-.scale-label-bottom { margin-top: 6px; }
+.scale-labels span:last-child { text-align: right; }
 
 /* ========== CHOICE CARDS ========== */
 .choice-list {
@@ -821,14 +852,15 @@ function scheduleAutoAdvance(screenDef) {
 // ========== RENDERERS ==========
 function renderScale(q) {
   const val = getR(q.id);
-  let html = `<div class="scale-label-top">${q.scaleMin||'1'}</div>`;
-  html += `<div class="stacked-bar" data-qid="${q.id}">`;
-  for (let i = 1; i <= 10; i++) {
-    const filled = val !== undefined && i <= val;
-    const selected = val === i;
-    html += `<div class="segment${filled?' filled':''}${selected?' selected':''}" data-val="${i}">${i}</div>`;
-  }
-  html += `</div><div class="scale-label-bottom">${q.scaleMax||'10'}</div>`;
+  const hasVal = val !== undefined && val !== null;
+  let html = `<div class="scale-slider-container" data-qid="${q.id}">`;
+  html += `<div class="scale-value-display${hasVal?'':' empty'}">${hasVal ? val : '—'}</div>`;
+  html += `<input type="range" class="scale-slider" min="1" max="10" step="1" value="${hasVal ? val : 5}" data-qid="${q.id}"${hasVal?'':''}>`;
+  html += `<div class="scale-ticks">`;
+  for (let i = 1; i <= 10; i++) html += `<span>${i}</span>`;
+  html += `</div>`;
+  html += `<div class="scale-labels"><span>${q.scaleMin||'1'}</span><span>${q.scaleMax||'10'}</span></div>`;
+  html += `</div>`;
   return html;
 }
 
@@ -1348,22 +1380,34 @@ function setupScreenListeners() {
     });
   }
 
-  // Stacked bar segments
-  $$('.stacked-bar').forEach(bar => {
-    const qid = bar.dataset.qid;
-    bar.querySelectorAll('.segment').forEach(seg => {
-      seg.addEventListener('click', () => {
-        const val = parseInt(seg.dataset.val);
+  // Scale sliders
+  $$('.scale-slider').forEach(slider => {
+    const qid = slider.dataset.qid;
+    const container = slider.closest('.scale-slider-container');
+    const display = container.querySelector('.scale-value-display');
+    let committed = getR(qid) !== undefined && getR(qid) !== null;
+
+    const update = () => {
+      const val = parseInt(slider.value);
+      display.textContent = val;
+      display.classList.remove('empty');
+      if (!committed) {
+        committed = true;
         setR(qid, val);
-        // Update visual
-        bar.querySelectorAll('.segment').forEach(s => {
-          const sv = parseInt(s.dataset.val);
-          s.classList.toggle('filled', sv <= val);
-          s.classList.toggle('selected', sv === val);
-        });
         scheduleAutoAdvance(def);
-      });
+      } else {
+        setR(qid, val);
+      }
+    };
+
+    slider.addEventListener('input', () => {
+      display.textContent = slider.value;
+      display.classList.remove('empty');
     });
+    slider.addEventListener('change', update);
+    // First touch/click commits the value
+    slider.addEventListener('mousedown', () => { if (!committed) update(); });
+    slider.addEventListener('touchstart', () => { if (!committed) update(); }, {passive:true});
   });
 
   // Choice cards
