@@ -9,14 +9,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Nunito:wght@400;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ========== THEMES ========== */
-:root, [data-theme="grounded"] {
-  --primary: #8B5E3C;
-  --accent: #D4943A;
-  --surface: #F5EDE3;
-  --bg: #FAF8F5;
-  --text: #3D2B1F;
-  --text-secondary: #7A6A5E;
-  --muted: #C4B5A3;
+:root, [data-theme="forest"] {
+  --primary: #2d4a2b;
+  --accent: #4a7c59;
+  --surface: #eef3ec;
+  --bg: #faf9f6;
+  --text: #2d4a2b;
+  --text-secondary: #7d8471;
+  --muted: #c2ccba;
   --error: #C0392B;
   --font-heading: 'Libre Baskerville', serif;
   --font-body: 'Source Sans 3', sans-serif;
@@ -542,7 +542,7 @@ body {
 }
 .theme-dot:hover { transform: scale(1.15); }
 .theme-dot.active { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
-.theme-dot[data-theme="grounded"] { background: #8B5E3C; }
+.theme-dot[data-theme="forest"] { background: #2d4a2b; }
 .theme-dot[data-theme="simple"] { background: #4A90D9; }
 .theme-dot[data-theme="sunset"] { background: #E07A5F; }
 
@@ -806,7 +806,7 @@ const state = {
   privacyAccepted: false,
   startedAt: null,
   responses: {},
-  theme: 'grounded',
+  theme: 'forest',
 };
 
 const qMap = {};
@@ -997,7 +997,7 @@ function renderWelcome() {
       <div class="welcome-desc">Egy rövid, fókuszált önvizsgálat, kifejezetten vezetői szerepekre tervezve. Öt dimenzióban vizsgáljuk a jelenlegi állapotodat.</div>
       <div class="welcome-badge">~15 perc</div>
       <div class="theme-switcher">
-        <div class="theme-dot${state.theme==='grounded'?' active':''}" data-theme="grounded" title="Grounded"></div>
+        <div class="theme-dot${state.theme==='forest'?' active':''}" data-theme="forest" title="Grounded"></div>
         <div class="theme-dot${state.theme==='simple'?' active':''}" data-theme="simple" title="Simple"></div>
         <div class="theme-dot${state.theme==='sunset'?' active':''}" data-theme="sunset" title="Sunset"></div>
       </div>
