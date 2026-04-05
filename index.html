@@ -550,22 +550,22 @@ body {
 /* ========== BLOCK WATERMARK ========== */
 .block-watermark {
   position: fixed;
-  right: -20px;
-  bottom: 80px;
-  width: 300px;
-  height: 300px;
-  opacity: 0.12;
-  color: var(--primary);
+  right: -10px;
+  bottom: 60px;
+  width: 320px;
+  height: 420px;
+  opacity: 0.07;
   pointer-events: none;
   z-index: 0;
-  max-width: 70vw;
+  max-width: 75vw;
 }
-.block-watermark svg {
+.block-watermark img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
 }
 
-/* ========== BLOCK BADGE (non-intro screens) ========== */
+/* ========== BLOCK BADGE (sticky on all question screens) ========== */
 .block-badge {
   font-family: var(--font-body);
   font-size: 0.72rem;
@@ -573,9 +573,15 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-secondary);
-  padding: 6px 0 16px;
-  border-bottom: 1px solid var(--muted);
-  margin-bottom: 20px;
+  padding: 8px 0 8px;
+  margin: -24px -20px 16px;
+  padding-left: 20px;
+  padding-right: 20px;
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid color-mix(in srgb, var(--muted) 50%, transparent);
 }
 
 /* ========== BLOCK INTRO ========== */
@@ -1216,112 +1222,18 @@ function drawRadar() {
   });
 }
 
-// ========== BLOCK WATERMARKS ==========
+// ========== BLOCK WATERMARKS (PNG images) ==========
 const WATERMARKS = {
-  // I. Szembenézés — tükör kerettel és tükröződő arc sziluettel
-  facing: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-    <ellipse cx="100" cy="85" rx="52" ry="68"/>
-    <ellipse cx="100" cy="85" rx="45" ry="61"/>
-    <path d="M80 180 Q100 165 120 180"/>
-    <line x1="100" y1="153" x2="100" y2="170"/>
-    <rect x="75" y="170" rx="3" width="50" height="8"/>
-    <circle cx="90" cy="75" r="3" fill="currentColor" opacity="0.3"/>
-    <circle cx="110" cy="75" r="3" fill="currentColor" opacity="0.3"/>
-    <path d="M92 90 Q100 97 108 90" fill="none"/>
-    <path d="M85 60 Q90 55 95 58" fill="none" opacity="0.4"/>
-    <path d="M105 58 Q110 55 115 60" fill="none" opacity="0.4"/>
-    <path d="M75 85 Q72 70 78 58" fill="none" opacity="0.2"/>
-    <path d="M125 85 Q128 70 122 58" fill="none" opacity="0.2"/>
-  </svg>`,
-  // II. Önismeret — labirintus / útvesztő (belső út metafora)
-  self: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="100" cy="100" r="90" opacity="0.5"/>
-    <circle cx="100" cy="100" r="75" opacity="0.4"/>
-    <circle cx="100" cy="100" r="60" opacity="0.3"/>
-    <circle cx="100" cy="100" r="45" opacity="0.3"/>
-    <circle cx="100" cy="100" r="30" opacity="0.3"/>
-    <circle cx="100" cy="100" r="12" fill="currentColor" opacity="0.15"/>
-    <path d="M100 10 L100 25" opacity="0.5"/>
-    <path d="M100 40 L100 55"/>
-    <path d="M100 70 L100 88"/>
-    <path d="M190 100 L175 100" opacity="0.5"/>
-    <path d="M160 100 L145 100"/>
-    <path d="M130 100 L112 100"/>
-    <path d="M10 100 L25 100" opacity="0.5"/>
-    <path d="M40 100 L55 100"/>
-    <path d="M70 100 L88 100"/>
-    <path d="M100 190 L100 175" opacity="0.5"/>
-    <path d="M100 160 L100 145"/>
-    <path d="M100 130 L100 112"/>
-    <path d="M164 36 L152 48" opacity="0.3"/>
-    <path d="M36 164 L48 152" opacity="0.3"/>
-    <path d="M164 164 L152 152" opacity="0.3"/>
-    <path d="M36 36 L48 48" opacity="0.3"/>
-  </svg>`,
-  // III. Purpose — világítótorony fénysugárral
-  purpose: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M85 195 L90 110 L110 110 L115 195 Z" opacity="0.4"/>
-    <rect x="88" y="95" width="24" height="15" rx="2"/>
-    <path d="M82 110 L118 110"/>
-    <path d="M80 195 L120 195"/>
-    <circle cx="100" cy="80" r="12"/>
-    <circle cx="100" cy="80" r="6" fill="currentColor" opacity="0.2"/>
-    <path d="M100 68 L100 50" opacity="0.5"/>
-    <path d="M88 80 L60 72" opacity="0.3"/>
-    <path d="M112 80 L140 72" opacity="0.3"/>
-    <path d="M88 72 L55 50" opacity="0.2"/>
-    <path d="M112 72 L145 50" opacity="0.2"/>
-    <path d="M92 70 L75 35" opacity="0.15"/>
-    <path d="M108 70 L125 35" opacity="0.15"/>
-    <path d="M100 68 L100 20" opacity="0.15"/>
-    <path d="M60 72 L30 60" opacity="0.1"/>
-    <path d="M140 72 L170 60" opacity="0.1"/>
-    <path d="M70 195 Q100 185 130 195" opacity="0.3"/>
-    <line x1="95" y1="130" x2="105" y2="130" opacity="0.3"/>
-    <line x1="93" y1="150" x2="107" y2="150" opacity="0.3"/>
-    <line x1="91" y1="170" x2="109" y2="170" opacity="0.3"/>
-  </svg>`,
-  // IV. Törzs — összefonódó emberek köre
-  tribe: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="100" cy="45" r="14"/><path d="M80 100 Q80 70 100 65 Q120 70 120 100" opacity="0.4"/>
-    <circle cx="50" cy="80" r="12"/><path d="M30 130 Q30 105 50 100 Q70 105 70 130" opacity="0.4"/>
-    <circle cx="150" cy="80" r="12"/><path d="M130 130 Q130 105 150 100 Q170 105 170 130" opacity="0.4"/>
-    <circle cx="65" cy="140" r="11"/><path d="M47 185 Q47 162 65 158 Q83 162 83 185" opacity="0.4"/>
-    <circle cx="135" cy="140" r="11"/><path d="M117 185 Q117 162 135 158 Q153 162 153 185" opacity="0.4"/>
-    <path d="M72 58 Q60 65 55 72" opacity="0.3"/>
-    <path d="M128 58 Q140 65 145 72" opacity="0.3"/>
-    <path d="M42 95 Q48 115 58 130" opacity="0.3"/>
-    <path d="M158 95 Q152 115 142 130" opacity="0.3"/>
-    <path d="M82 100 Q75 115 70 132" opacity="0.3"/>
-    <path d="M118 100 Q125 115 130 132" opacity="0.3"/>
-    <circle cx="100" cy="100" r="55" stroke-dasharray="4 8" opacity="0.15"/>
-  </svg>`,
-  // V. Tudatosság — lótuszvirág vízfelszínen
-  consciousness: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M100 90 Q85 60 100 30 Q115 60 100 90" fill="currentColor" opacity="0.08"/>
-    <path d="M100 90 Q85 60 100 30 Q115 60 100 90"/>
-    <path d="M100 95 Q65 75 50 45 Q85 65 100 95" fill="currentColor" opacity="0.06"/>
-    <path d="M100 95 Q65 75 50 45 Q85 65 100 95"/>
-    <path d="M100 95 Q135 75 150 45 Q115 65 100 95" fill="currentColor" opacity="0.06"/>
-    <path d="M100 95 Q135 75 150 45 Q115 65 100 95"/>
-    <path d="M100 100 Q55 85 30 65 Q70 80 100 100" fill="currentColor" opacity="0.04"/>
-    <path d="M100 100 Q55 85 30 65 Q70 80 100 100"/>
-    <path d="M100 100 Q145 85 170 65 Q130 80 100 100" fill="currentColor" opacity="0.04"/>
-    <path d="M100 100 Q145 85 170 65 Q130 80 100 100"/>
-    <ellipse cx="100" cy="108" rx="70" ry="4" opacity="0.3"/>
-    <path d="M40 108 Q70 120 100 108 Q130 120 160 108" opacity="0.2"/>
-    <path d="M50 115 Q75 125 100 115 Q125 125 150 115" opacity="0.12"/>
-    <circle cx="100" cy="85" r="5" fill="currentColor" opacity="0.1"/>
-    <line x1="100" y1="100" x2="100" y2="155" opacity="0.3"/>
-    <path d="M100 155 Q85 165 75 180" opacity="0.2"/>
-    <path d="M100 155 Q115 165 125 180" opacity="0.2"/>
-    <path d="M100 140 Q90 150 82 165" opacity="0.15"/>
-  </svg>`,
+  facing: 'images/facing.png',
+  self: 'images/self.png',
+  purpose: 'images/purpose.png',
+  tribe: 'images/tribe.png',
+  consciousness: 'images/consciousness.png',
 };
 
 function getBlockWatermark(blockId) {
   if (!blockId || !WATERMARKS[blockId]) return '';
-  return `<div class="block-watermark">${WATERMARKS[blockId]}</div>`;
+  return `<div class="block-watermark"><img src="${WATERMARKS[blockId]}" alt="" loading="lazy"></div>`;
 }
 
 // ========== RENDER SCREEN ==========
