@@ -895,7 +895,7 @@ function renderChoice(q) {
 
 function renderText(q) {
   const val = getR(q.id) || '';
-  return `<textarea class="text-input" data-qid="${q.id}" placeholder="Írd ide a válaszod…" rows="3">${val}</textarea>`;
+  return `<textarea class="text-input" data-qid="${q.id}" placeholder="Válaszolj úgy, ahogy kényelmes – írva vagy diktálva" rows="3">${val}</textarea>`;
 }
 
 function renderNumber(q) {
@@ -926,7 +926,7 @@ function renderYesNoText(q) {
   html += `</div>`;
   html += `<div class="conditional-text${showText?' visible':''}" data-cond="${q.id}">`;
   html += `<div class="question-sublabel">${q.textPrompt||'Kifejtés:'}</div>`;
-  html += `<textarea class="text-input" data-qid="${q.id}_text" placeholder="Írd ide…" rows="3">${textVal}</textarea>`;
+  html += `<textarea class="text-input" data-qid="${q.id}_text" placeholder="Válaszolj úgy, ahogy kényelmes – írva vagy diktálva" rows="3">${textVal}</textarea>`;
   html += `</div>`;
   return html;
 }
