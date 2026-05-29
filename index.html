@@ -862,6 +862,63 @@ body {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ========== AUDIO SEGMENT (immersive player) ========== */
+body.segment-active .progress-bar,
+body.segment-active .nav-bar,
+body.segment-active .block-watermark-global,
+body.segment-active .block-badge-global { display: none !important; }
+body.segment-active .screen-container { padding: 0 !important; overflow: hidden; }
+/* identity transform on .screen would make it the containing block for the fixed .seg — neutralize it */
+body.segment-active .screen { transform: none !important; }
+
+.seg {
+  position: fixed;
+  inset: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(160deg, #14241a 0%, #233a22 55%, #2d4a2b 100%);
+  color: #fff;
+  overflow: hidden;
+}
+.seg-ambient { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 0; transition: opacity .4s; }
+.seg-glow { position: absolute; width: 78%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(143,199,161,0.38) 0%, rgba(143,199,161,0.10) 38%, transparent 68%);
+  filter: blur(6px); transform: scale(1); transition: transform .1s ease-out, opacity .25s; }
+.seg-rings { position: absolute; width: 94%; aspect-ratio: 1; transform: scale(1); transition: transform .1s ease-out; }
+.seg-rings circle { fill: none; stroke: rgba(255,255,255,0.10); stroke-width: 1; }
+.seg-wave { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 160px; z-index: 0; opacity: 0; transition: opacity .4s; pointer-events: none; }
+
+.seg-top { position: relative; z-index: 3; padding: 22px 24px 8px; display: flex; align-items: center; gap: 14px; }
+.seg-back { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.seg-back svg { width: 18px; height: 18px; }
+.seg-label { font-family: var(--font-body); font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .16em; color: rgba(255,255,255,0.55); }
+
+.seg-lyrics-wrap { position: relative; z-index: 2; flex: 1; overflow: hidden;
+  -webkit-mask-image: linear-gradient(transparent, #000 20%, #000 72%, transparent);
+  mask-image: linear-gradient(transparent, #000 20%, #000 72%, transparent); }
+.seg-lyrics { position: absolute; left: 0; right: 0; padding: 0 30px; transition: transform .55s cubic-bezier(.22,.61,.36,1); }
+.seg-line { font-family: 'Libre Baskerville', serif; font-size: 1.34rem; line-height: 1.44; padding: 14px 0;
+  color: rgba(255,255,255,0.26); transition: color .45s ease, text-shadow .45s ease; cursor: pointer; }
+.seg-line.near { color: rgba(255,255,255,0.52); }
+.seg-line.active { color: #fff; text-shadow: 0 0 26px rgba(143,199,161,0.5); }
+.seg-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 40px;
+  font-family: 'Libre Baskerville', serif; font-size: 1.3rem; color: rgba(255,255,255,0.85); }
+
+.seg-controls { position: relative; z-index: 3; padding: 14px 24px max(20px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 13px; }
+.seg-progress { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16); overflow: hidden; cursor: pointer; }
+.seg-progress-fill { height: 100%; width: 0; background: var(--accent, #8fc7a1); border-radius: 2px; }
+.seg-ctl-row { display: flex; align-items: center; gap: 16px; }
+.seg-play { width: 52px; height: 52px; border-radius: 50%; border: none; background: #fff; color: #1b3019; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.seg-play svg { width: 22px; height: 22px; }
+.seg-time { font-size: .78rem; color: rgba(255,255,255,0.55); font-variant-numeric: tabular-nums; }
+.seg-next { margin-left: auto; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22); color: #fff; border-radius: 22px; padding: 10px 20px; font-size: .9rem; font-weight: 600; cursor: pointer; font-family: var(--font-body); }
+.seg-next:hover { background: rgba(255,255,255,0.18); }
 </style>
 </head>
 <body>
@@ -982,31 +1039,49 @@ const BLOCKS = {
 };
 
 // ========== SCREEN DEFINITIONS ==========
+// ========== AUDIO SEGMENTS (Karafiáth Balázs) ==========
+const SEGMENTS = {
+  seg1: {file:'audio/01-szembenezes.m4a', cues:'audio/01-szembenezes.json', label:'Bevezető'},
+  seg2: {file:'audio/02-onismeret.m4a',   cues:'audio/02-onismeret.json',   label:'Átvezetés'},
+  seg3: {file:'audio/03-purpose.m4a',     cues:'audio/03-purpose.json',     label:'Átvezetés'},
+  seg4: {file:'audio/04-torzs.m4a',       cues:'audio/04-torzs.json',       label:'Átvezetés'},
+  seg5: {file:'audio/05-tudatossag.m4a',  cues:'audio/05-tudatossag.json',  label:'Átvezetés'},
+  seg6: {file:'audio/06-adatlap.m4a',     cues:'audio/06-adatlap.json',     label:'Átvezetés'},
+  seg7: {file:'audio/07-zaras.m4a',       cues:'audio/07-zaras.json',       label:'Zárás'},
+};
+
 const SCREENS = [
   {id:'welcome',type:'welcome'},
+  {id:'seg1',type:'segment',segment:'seg1'},
   {id:'s2',type:'questions',blockIntro:'facing',questions:['q11','q12']},
   {id:'s3',type:'questions',questions:['q13','q14','q15']},
   {id:'s4',type:'questions',questions:['q16','q17','q18']},
   {id:'s5',type:'questions',questions:['q19','q20']},
+  {id:'seg2',type:'segment',segment:'seg2'},
   {id:'s6',type:'questions',blockIntro:'self',questions:['q21','q22']},
   {id:'s7',type:'questions',questions:['q23','q24','q25']},
   {id:'s8',type:'questions',questions:['q26','q27','q28']},
   {id:'s9',type:'questions',questions:['q29','q30']},
+  {id:'seg3',type:'segment',segment:'seg3'},
   {id:'s10',type:'questions',blockIntro:'purpose',questions:['q31','q32']},
   {id:'s11',type:'questions',questions:['q33','q34','q35']},
   {id:'s12',type:'questions',questions:['q36','q37','q38']},
   {id:'s13',type:'questions',questions:['q39','q40']},
+  {id:'seg4',type:'segment',segment:'seg4'},
   {id:'s14',type:'questions',blockIntro:'tribe',questions:['q41','q42','q43']},
   {id:'s15',type:'questions',questions:['q44','q45','q46']},
   {id:'s16',type:'questions',questions:['q47','q48','q49','q50']},
+  {id:'seg5',type:'segment',segment:'seg5'},
   {id:'s17',type:'questions',blockIntro:'consciousness',questions:['q51','q52','q53']},
   {id:'s18',type:'questions',questions:['q54','q55','q56']},
   {id:'s19',type:'questions',questions:['q57','q58','q59','q60']},
-  {id:'radar',type:'radar'},
+  {id:'seg6',type:'segment',segment:'seg6'},
   {id:'s21',type:'questions',blockIntro:'demographics',questions:['q1','q2','q3']},
   {id:'s22',type:'questions',questions:['q4','q6']},
   {id:'s23',type:'questions',questions:['q7','q8','q9']},
-  {id:'s24',type:'questions',questions:['q10']},
+  {id:'s24',type:'questions',questions:['q10'],submit:true},
+  {id:'radar',type:'radar'},
+  {id:'seg7',type:'segment',segment:'seg7'},
   {id:'thankyou',type:'thankyou'},
 ];
 
@@ -1300,6 +1375,154 @@ function renderThankYou() {
     </div>`;
 }
 
+// ========== AUDIO SEGMENT PLAYER ==========
+function renderSegment(segId) {
+  const s = SEGMENTS[segId] || {};
+  return `
+    <div class="seg" data-seg="${segId}">
+      <div class="seg-ambient" id="segAmbient">
+        <div class="seg-glow"></div>
+        <svg class="seg-rings" viewBox="0 0 320 320">
+          <circle cx="160" cy="160" r="42"/><circle cx="160" cy="160" r="80"/>
+          <circle cx="160" cy="160" r="118"/><circle cx="160" cy="160" r="152"/>
+        </svg>
+      </div>
+      <canvas class="seg-wave" id="segWave"></canvas>
+      <div class="seg-top">
+        <button class="seg-back" id="segBack" aria-label="Vissza">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="seg-label">${s.label || ''}</div>
+      </div>
+      <div class="seg-lyrics-wrap" id="segLyricsWrap"><div class="seg-lyrics" id="segLyrics"></div></div>
+      <div class="seg-controls">
+        <div class="seg-progress" id="segProgress"><div class="seg-progress-fill" id="segProgressFill"></div></div>
+        <div class="seg-ctl-row">
+          <button class="seg-play" id="segPlay" aria-label="Lejátszás / szünet"></button>
+          <span class="seg-time" id="segTime">0:00</span>
+          <button class="seg-next" id="segNext">Tovább →</button>
+        </div>
+      </div>
+      <audio id="segAudio" src="${s.file}" preload="auto" crossorigin="anonymous"></audio>
+    </div>`;
+}
+
+let segState = null;
+const SEG_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+const SEG_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+
+function teardownSegment() {
+  if (!segState) return;
+  try { segState.audio.pause(); } catch(e) {}
+  if (segState.raf) cancelAnimationFrame(segState.raf);
+  try { if (segState.ac) segState.ac.close(); } catch(e) {}
+  segState = null;
+}
+
+function initSegment(segId, autoplay) {
+  teardownSegment();
+  const cfg = SEGMENTS[segId];
+  const audio = $('#segAudio');
+  const lyricsEl = $('#segLyrics');
+  const st = {
+    audio, lyricsEl,
+    wrap: $('#segLyricsWrap'), glow: $('.seg-glow'), rings: $('.seg-rings'),
+    waveC: $('#segWave'), fill: $('#segProgressFill'), timeEl: $('#segTime'), playBtn: $('#segPlay'),
+    cues: [], lineEls: [], activeIdx: -2, amp: 0, mode: 'rings', ac: null, analyser: null, data: null, raf: null,
+  };
+  st.wctx = st.waveC.getContext('2d');
+  segState = st;
+
+  const fmt = t => { t = Math.max(0, t||0); const m = Math.floor(t/60), s = Math.floor(t%60); return m + ':' + String(s).padStart(2,'0'); };
+
+  function setActive(i) {
+    if (i === st.activeIdx) return;
+    st.activeIdx = i;
+    st.lineEls.forEach((el, j) => { el.classList.toggle('active', j === i); el.classList.toggle('near', Math.abs(j - i) === 1); });
+    const el = st.lineEls[i < 0 ? 0 : i];
+    if (el) { const off = st.wrap.clientHeight * 0.42 - el.offsetTop - el.offsetHeight / 2; st.lyricsEl.style.transform = 'translateY(' + off + 'px)'; }
+  }
+  function cueIndex(t) { let idx = -1; for (let i = 0; i < st.cues.length; i++) { if (st.cues[i].s <= t) idx = i; else break; } return idx; }
+
+  function initGraph() {
+    if (st.ac) return;
+    try {
+      st.ac = new (window.AudioContext || window.webkitAudioContext)();
+      const src = st.ac.createMediaElementSource(audio);
+      st.analyser = st.ac.createAnalyser();
+      st.analyser.fftSize = 512; st.analyser.smoothingTimeConstant = 0.85;
+      src.connect(st.analyser); st.analyser.connect(st.ac.destination);
+      st.data = new Uint8Array(st.analyser.fftSize);
+    } catch(e) {}
+  }
+  function play() { initGraph(); if (st.ac && st.ac.state === 'suspended') st.ac.resume(); audio.play().catch(() => {}); }
+  function syncIcon() { st.playBtn.innerHTML = audio.paused ? SEG_PLAY : SEG_PAUSE; }
+
+  function drawWave() {
+    const W = st.waveC.width, H = st.waveC.height, dpr = window.devicePixelRatio || 1;
+    st.wctx.clearRect(0, 0, W, H);
+    if (!st.analyser) return;
+    st.analyser.getByteTimeDomainData(st.data);
+    st.wctx.lineWidth = 2.4 * dpr; st.wctx.strokeStyle = 'rgba(143,199,161,0.92)'; st.wctx.lineJoin = 'round';
+    st.wctx.beginPath(); const slice = W / st.data.length;
+    for (let i = 0; i < st.data.length; i++) { const v = (st.data[i] - 128) / 128; const y = H/2 + v*(H/2)*0.92; i === 0 ? st.wctx.moveTo(0, y) : st.wctx.lineTo(i*slice, y); }
+    st.wctx.stroke();
+  }
+
+  function loop() {
+    const t = audio.currentTime || 0;
+    if (st.cues.length) setActive(cueIndex(t));
+    st.fill.style.width = (t / (audio.duration || 1) * 100) + '%';
+    st.timeEl.textContent = fmt(t);
+    if (st.analyser) {
+      st.analyser.getByteTimeDomainData(st.data);
+      let sum = 0; for (let i = 0; i < st.data.length; i++) { const v = (st.data[i] - 128) / 128; sum += v * v; }
+      const rms = Math.sqrt(sum / st.data.length); st.amp += (rms - st.amp) * 0.18; const a = Math.min(1, st.amp * 3.4);
+      if (st.mode === 'rings') {
+        st.rings.style.transform = 'scale(' + (1 + a * 0.13) + ')';
+        st.glow.style.transform = 'scale(' + (1 + a * 0.55) + ')';
+        st.glow.style.opacity = String(0.45 + a * 0.55);
+      } else drawWave();
+    }
+    st.raf = requestAnimationFrame(loop);
+  }
+
+  // Lyrics
+  if (cfg.cues) {
+    fetch(cfg.cues).then(r => r.json()).then(cues => {
+      if (segState !== st) return;
+      st.cues = cues; lyricsEl.innerHTML = '';
+      st.lineEls = cues.map(c => {
+        const d = document.createElement('div'); d.className = 'seg-line'; d.textContent = c.t;
+        d.addEventListener('click', () => { audio.currentTime = c.s + 0.02; if (audio.paused) play(); });
+        lyricsEl.appendChild(d); return d;
+      });
+      requestAnimationFrame(() => { if (segState === st) setActive(0); });
+    }).catch(() => {});
+  } else {
+    const e = document.createElement('div');
+    e.className = 'seg-empty';
+    e.textContent = 'Hallgasd meg a zárást.';
+    st.wrap.appendChild(e);
+  }
+
+  // Controls
+  syncIcon();
+  audio.addEventListener('play', syncIcon);
+  audio.addEventListener('pause', syncIcon);
+  audio.addEventListener('ended', syncIcon);
+  st.playBtn.addEventListener('click', () => { audio.paused ? play() : audio.pause(); });
+  $('#segProgress').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); audio.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * (audio.duration || 1); });
+  $('#segNext').addEventListener('click', () => goNext());
+  $('#segBack').addEventListener('click', () => goBack());
+
+  const dpr = window.devicePixelRatio || 1;
+  st.waveC.width = st.waveC.clientWidth * dpr; st.waveC.height = st.waveC.clientHeight * dpr;
+
+  loop();
+  if (autoplay) play(); // only auto-start when entered via a forward navigation gesture (Kezdjük / Tovább)
+}
+
 // ========== SCORING ==========
 function computeScores() {
   const cfg = {
@@ -1478,6 +1701,8 @@ function renderScreen(index) {
 
   if (def.type === 'welcome') {
     html = renderWelcome();
+  } else if (def.type === 'segment') {
+    html = renderSegment(def.segment);
   } else if (def.type === 'radar') {
     html = renderRadar();
   } else if (def.type === 'thankyou') {
@@ -1516,26 +1741,28 @@ function updateNav() {
   btnBack.classList.toggle('hidden', state.currentScreen === 0);
 
   // Step indicator
-  if (def.type === 'welcome' || def.type === 'thankyou') {
+  if (def.type === 'welcome' || def.type === 'thankyou' || def.type === 'segment') {
     stepInd.textContent = '';
   } else {
     stepInd.textContent = `${state.currentScreen} / ${SCREENS.length - 2}`;
   }
 
   // Next button logic
-  if (def.type === 'welcome') {
+  if (def.type === 'segment') {
+    btnNext.classList.add('hidden');
+    btnBack.classList.add('hidden');
+  } else if (def.type === 'welcome') {
     btnNext.textContent = 'Kezdjük';
     btnNext.classList.remove('hidden');
     btnNext.disabled = !state.privacyAccepted;
   } else if (def.type === 'thankyou') {
     btnNext.classList.add('hidden');
   } else if (def.type === 'radar') {
-    btnNext.textContent = 'Tovább az adatlapra';
+    btnNext.textContent = 'Tovább';
     btnNext.classList.remove('hidden');
     btnNext.disabled = false;
-  } else if (state.currentScreen === SCREENS.length - 2) {
-    // Last question screen before thank you
-    btnNext.textContent = 'Beküldés';
+  } else if (def.submit) {
+    btnNext.textContent = 'Eredményeim';
     btnNext.classList.remove('hidden');
     btnNext.disabled = false;
   } else if (isAutoAdvanceScreen(def)) {
@@ -1548,9 +1775,12 @@ function updateNav() {
   }
 }
 
-function showScreen(index, direction) {
+function showScreen(index, direction, autoplay) {
+  teardownSegment();
   const container = $('#screenContainer');
   const oldScreen = container.querySelector('.screen');
+  const def = SCREENS[index];
+  document.body.classList.toggle('segment-active', def.type === 'segment');
 
   const newDiv = document.createElement('div');
   newDiv.className = 'screen';
@@ -1562,14 +1792,19 @@ function showScreen(index, direction) {
   container.scrollTop = 0;
   container.appendChild(newDiv);
 
-  // Animate in
-  if (direction) {
+  // Animate in (skip for immersive segments to avoid opacity/transform interplay)
+  if (direction && def.type !== 'segment') {
     newDiv.classList.add(direction === 'forward' ? 'slide-in-right' : 'slide-in-left');
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         newDiv.classList.remove('slide-in-right', 'slide-in-left');
       });
     });
+  }
+
+  // Segment: init synchronously so audio play() stays within the navigation gesture
+  if (def.type === 'segment') {
+    initSegment(def.segment, autoplay === true);
   }
 
   // Setup event listeners for new screen
@@ -1643,19 +1878,19 @@ function goNext() {
     state.startedAt = Date.now();
   }
 
-  // Submit on last question screen
-  if (state.currentScreen === SCREENS.length - 2) {
+  // Submit after the last data question (before results)
+  if (SCREENS[state.currentScreen].submit) {
     submitResponses();
   }
 
   if (state.currentScreen < SCREENS.length - 1) {
-    showScreen(state.currentScreen + 1, 'forward');
+    showScreen(state.currentScreen + 1, 'forward', true);
   }
 }
 
 function goBack() {
   if (state.currentScreen > 0) {
-    showScreen(state.currentScreen - 1, 'back');
+    showScreen(state.currentScreen - 1, 'back', false);
   }
 }
 
@@ -1854,9 +2089,9 @@ function init() {
 
   // Show first screen or resume
   if (hasDraft && state.currentScreen > 0) {
-    showScreen(state.currentScreen, 'forward');
+    showScreen(state.currentScreen, 'forward', false);
   } else {
-    showScreen(0, 'forward');
+    showScreen(0, 'forward', false);
   }
 
   // Nav button listeners
