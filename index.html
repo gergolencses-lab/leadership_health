@@ -7,6 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Nunito:wght@400;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Report PDF generation (client-side) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
 /* ========== THEMES ========== */
 :root, [data-theme="forest"] {
@@ -1356,11 +1359,17 @@ function renderRadar() {
 function renderThankYou() {
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const name = (getR('q10_name') || '').trim();
-  const optedIn = getR('q10') === 'Igen';
+  const email = (getR('q10_email') || '').trim();
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const optedIn = getR('q10') === 'Igen' && validEmail;
   const title = name ? `Köszönjük, ${esc(name)}!` : 'Köszönjük!';
   const followup = optedIn
-    ? 'Jelezted, hogy szeretnél mélyebben beszélni valakivel – hamarosan felvesszük veled a kapcsolatot a megadott elérhetőségeden.'
-    : 'Ha később mégis szeretnél mélyebben beszélni valakivel, bármikor visszatérhetsz.';
+    ? 'Elkészült a személyes visszajelzésed a válaszaid alapján. Töltsd le alább – és ha szeretnél róla mélyebben beszélni, hamarosan jelentkezünk a megadott elérhetőségeden.'
+    : 'Ha később mégis szeretnél mélyebben beszélni valakivel vagy személyes visszajelzést kérni, bármikor visszatérhetsz.';
+  const downloadBtn = optedIn
+    ? `<button class="btn-next" id="btnDownloadReport" style="max-width:340px;margin-top:8px;" onclick="downloadReport()">Töltsd le a személyes visszajelzésed</button>
+       <div class="welcome-desc" style="font-size:0.8rem;margin-top:10px;">A PDF bizalmas, csak neked szól. Ha még „készül", próbáld pár másodperc múlva.</div>`
+    : '';
   return `
     <div class="thankyou">
       <div class="thankyou-icon">
@@ -1371,6 +1380,7 @@ function renderThankYou() {
       <div class="screen-title">${title}</div>
       <div class="screen-subtitle">A válaszaid rögzítésre kerültek.</div>
       <div class="welcome-desc" style="margin-top:16px;">${followup}</div>
+      ${downloadBtn}
       <button class="btn-restart" onclick="localStorage.clear();location.reload();">Újrakezdés</button>
     </div>`;
 }
@@ -1549,8 +1559,8 @@ function computeScores() {
   return scores;
 }
 
-function drawRadar() {
-  const canvas = document.getElementById('radarCanvas');
+function drawRadar(canvas) {
+  canvas = canvas || document.getElementById('radarCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
@@ -1894,7 +1904,128 @@ function goBack() {
   }
 }
 
-// ========== SUBMISSION ==========
+// ========== REPORT / SUBMISSION ==========
+// Apps Script Web App URL + shared secret — töltsd ki a Code.gs deploy után.
+// Üresen hagyva a kliens-oldali PDF (letöltés) működik, csak a Drive/Sheet mentés marad el.
+const REPORT_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwGGyicPwHoolypNXGYpMhLQLphgr2LOrwdBwQvG0x1wrEqBId68sbcX3MUWJc9rdn8uA/exec';
+const REPORT_SECRET   = 'nagy titok mitok';   // = Code.gs SHARED_SECRET
+let lastReport = null;
+
+const DIM_LABELS = {facing:'Szembenézés', self:'Önismeret', purpose:'Purpose', tribe:'Törzs', consciousness:'Tudatosság'};
+const DIM_ORDER = ['facing','self','purpose','tribe','consciousness'];
+function scoreBand(v) { return v < 4 ? 'fejlesztendő' : (v < 7 ? 'kiegyensúlyozott' : 'erősség'); }
+
+function reportAnswer(q) {
+  const v = getR(q.id);
+  const has = v !== undefined && v !== null && String(v).trim() !== '';
+  switch (q.type) {
+    case 'scale': return has ? `${v} / 10` : '';
+    case 'percentage': return has ? `${v}%` : '';
+    case 'yesno_text': { const t = (getR(q.id+'_text')||'').trim(); return has ? (v + (t ? ' — ' + t : '')) : ''; }
+    case 'number_yesno': { const nx = getR(q.id+'_num'); const yn = getR(q.id+'_yn'); const p = []; if (nx) p.push(nx + (q.numberLabel ? ' ' + q.numberLabel : '')); if (yn) p.push(yn); return p.join(' · '); }
+    case 'yesno_contact': return '';
+    default: return has ? String(v) : '';
+  }
+}
+
+function buildReportNode(scores) {
+  const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const name = (getR('q10_name')||'').trim();
+  const role = (getR('q1')||'').trim();
+  // radar → offscreen canvas → image
+  const rc = document.createElement('canvas'); rc.width = 680; rc.height = 680;
+  drawRadar(rc);
+  const radarImg = rc.toDataURL('image/png');
+
+  const scoreRows = DIM_ORDER.map(k => {
+    const v = scores[k]; const pct = (v/10*100).toFixed(0);
+    return `<div style="display:flex;align-items:center;gap:12px;margin:7px 0;">
+      <div style="flex:0 0 150px;font-weight:600;color:#2d4a2b;">${DIM_LABELS[k]}</div>
+      <div style="flex:1;height:10px;background:#e3e9df;border-radius:5px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:#4a7c59;"></div></div>
+      <div style="flex:0 0 130px;text-align:right;color:#4a7c59;font-weight:700;">${v.toFixed(1)} · ${scoreBand(v)}</div>
+    </div>`;
+  }).join('');
+
+  const answerSections = DIM_ORDER.map(k => {
+    const items = QUESTIONS.filter(q => q.block === k).map(q => {
+      const a = reportAnswer(q); if (!a) return '';
+      return `<div style="margin:10px 0;"><div style="font-size:12px;color:#7d8471;">${esc(q.label)}</div><div style="font-size:14px;color:#2d3a2b;white-space:pre-wrap;line-height:1.5;">${esc(a)}</div></div>`;
+    }).filter(Boolean).join('');
+    if (!items) return '';
+    return `<div style="margin-top:24px;page-break-inside:avoid;"><div style="font-family:'Libre Baskerville',serif;font-size:17px;color:#2d4a2b;border-bottom:2px solid #cdd8c6;padding-bottom:5px;margin-bottom:8px;">${BLOCKS[k].num} ${esc(BLOCKS[k].title)}</div>${items}</div>`;
+  }).join('');
+
+  const dateStr = new Date().toLocaleDateString('hu-HU');
+  const node = document.createElement('div');
+  node.style.cssText = 'position:fixed;left:-99999px;top:0;width:760px;background:#faf9f6;color:#2d3a2b;font-family:\'Source Sans 3\',sans-serif;padding:48px;box-sizing:border-box;';
+  node.innerHTML = `
+    <div style="font-family:'Libre Baskerville',serif;font-size:26px;color:#2d4a2b;line-height:1.25;">Vezetői Jóllét — Személyes visszajelzés</div>
+    <div style="color:#7d8471;margin-top:4px;font-size:14px;">${[name && esc(name), role && esc(role), dateStr].filter(Boolean).join(' · ')}</div>
+    <div style="text-align:center;margin:18px 0 4px;"><img src="${radarImg}" style="width:340px;height:340px;" alt="Jóllét térkép"></div>
+    <div style="margin-top:6px;">${scoreRows}</div>
+    <div style="font-size:11.5px;color:#7d8471;margin-top:8px;">Skála 1–10 · &lt;4 fejlesztendő · 4–6,9 kiegyensúlyozott · ≥7 erősség. A pontszámok a skálás kérdésekből számolódnak; a szöveges válaszaid az önreflexiódat tükrözik vissza.</div>
+    ${answerSections}
+    <div style="margin-top:30px;padding-top:12px;border-top:1px solid #cdd8c6;font-size:11px;color:#9aa392;">Szigorúan bizalmas — csak neked szól. Vezetői Jóllét Szűrés · a válaszokat anonim módon, kutatási céllal kezeljük.</div>
+  `;
+  return node;
+}
+
+async function renderReportPDF(node) {
+  const canvas = await html2canvas(node, { scale: 2, backgroundColor: '#faf9f6', useCORS: true });
+  const Ctor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+  const pdf = new Ctor('p', 'mm', 'a4');
+  const pageW = 210, pageH = 297;
+  const imgData = canvas.toDataURL('image/jpeg', 0.92);
+  const imgH = canvas.height * pageW / canvas.width;
+  let position = 0, heightLeft = imgH;
+  pdf.addImage(imgData, 'JPEG', 0, position, pageW, imgH);
+  heightLeft -= pageH;
+  while (heightLeft > 0) { position -= pageH; pdf.addPage(); pdf.addImage(imgData, 'JPEG', 0, position, pageW, imgH); heightLeft -= pageH; }
+  const slug = (getR('q10_name')||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'kitolto';
+  const filename = `vezetoi-jollet-${slug}-${new Date().toISOString().slice(0,10)}.pdf`;
+  return { blob: pdf.output('blob'), base64: pdf.output('datauristring').split(',')[1], filename };
+}
+
+async function deliverReport() {
+  try {
+    const scores = computeScores();
+    const node = buildReportNode(scores);
+    document.body.appendChild(node);
+    let out;
+    try { out = await renderReportPDF(node); } finally { node.remove(); }
+    lastReport = out;
+    const btn = document.getElementById('btnDownloadReport');
+    if (btn) btn.disabled = false;
+    if (REPORT_ENDPOINT) {
+      try {
+        // no-cors: az Apps Script /exec 302-átirányítását a böngésző CORS-ban nem tudná
+        // olvasni; a Drive-fájl + Sheet-sor szerver-oldalon létrejön. A hostolt linket a
+        // Sheetből éred el; a kitöltő a kliens-oldali letöltést kapja.
+        await fetch(REPORT_ENDPOINT, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify({
+            secret: REPORT_SECRET,
+            name: (getR('q10_name')||'').trim(),
+            email: (getR('q10_email')||'').trim(),
+            phone: (getR('q10_phone')||'').trim(),
+            scores, pdfBase64: out.base64, filename: out.filename,
+          }),
+        });
+      } catch (e) { console.log('Report upload failed (a letöltés akkor is működik):', e); }
+    }
+  } catch (e) { console.log('Report generation failed:', e); }
+}
+
+function downloadReport() {
+  if (!lastReport || !lastReport.blob) { alert('A személyes visszajelzésed még készül – próbáld pár másodperc múlva.'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(lastReport.blob);
+  a.download = lastReport.filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
 async function submitResponses() {
   const payload = {
     submittedAt: new Date().toISOString(),
@@ -1903,26 +2034,13 @@ async function submitResponses() {
     scores: computeScores(),
     responses: state.responses,
   };
-
-  // TODO: Replace with actual Google Apps Script URL
-  const ENDPOINT = null;
-
-  if (ENDPOINT) {
-    try {
-      await fetch(ENDPOINT, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(payload),
-      });
-    } catch(e) {
-      console.log('Submission failed, data saved locally:', payload);
-    }
-  }
-
-  // Always log payload for debugging
   console.log('Survey payload:', JSON.stringify(payload, null, 2));
 
-  // Clear draft
+  // Csak az email-megadóknak generálunk + tárolunk személyes reportot
+  const email = (getR('q10_email')||'').trim();
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (getR('q10') === 'Igen' && validEmail) { deliverReport(); }
+
   try { localStorage.removeItem('wellbeing_draft'); } catch(e) {}
 }
 
