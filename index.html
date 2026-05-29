@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vezetői Jóllét Szűrés</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -372,6 +372,38 @@ body {
   max-height: 200px;
   opacity: 1;
 }
+
+/* ========== CONTACT CAPTURE (q10) ========== */
+.conditional-contact {
+  margin-top: 14px;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.35s ease, opacity 0.35s ease, margin 0.35s ease;
+}
+.conditional-contact.visible {
+  max-height: 420px;
+  opacity: 1;
+}
+.contact-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.contact-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 2px solid var(--muted);
+  background: var(--surface);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.contact-input:focus { border-color: var(--primary); }
+.contact-input::placeholder { color: var(--text-secondary); opacity: 0.7; }
 
 /* ========== NAVIGATION ========== */
 .nav-bar {
@@ -937,7 +969,7 @@ const QUESTIONS = [
   {id:'q7',block:'demographics',type:'dropdown',label:'Melyik országban dolgozol elsősorban?',options:['Magyarország','Ausztria','Németország','Svájc','Románia','Szlovákia','Szerbia','Horvátország','Csehország','Lengyelország','Egyesült Királyság','Egyesült Államok','Egyéb']},
   {id:'q8',block:'demographics',type:'number',label:'Hány éves vagy?'},
   {id:'q9',block:'demographics',type:'choice',label:'Mi a legmagasabb iskolai végzettséged?',options:['Főiskola / BA','Egyetem / MA','PhD','MBA','Egyéb']},
-  {id:'q10',block:'demographics',type:'yesno',label:'Szeretnél-e minderről mélyebben beszélni valakivel?'},
+  {id:'q10',block:'demographics',type:'yesno_contact',label:'Szeretnél-e minderről mélyebben beszélni valakivel?'},
 ];
 
 const BLOCKS = {
@@ -1109,6 +1141,31 @@ function renderYesNoText(q) {
   return html;
 }
 
+function renderYesNoContact(q) {
+  const val = getR(q.id);
+  const opts = q.yesnoOptions || ['Igen','Nem'];
+  const showContact = val === opts[0];
+  const esc = s => String(s).replace(/"/g, '&quot;');
+  const nameVal = esc(getR(q.id+'_name') || '');
+  const emailVal = esc(getR(q.id+'_email') || '');
+  const phoneVal = esc(getR(q.id+'_phone') || '');
+  let html = `<div class="yesno-group" data-qid="${q.id}">`;
+  opts.forEach(opt => {
+    html += `<button class="yesno-btn${val===opt?' selected':''}" data-val="${opt}">${opt}</button>`;
+  });
+  html += `</div>`;
+  html += `<div class="conditional-contact${showContact?' visible':''}" data-contact="${q.id}">`;
+  html += `<div class="question-sublabel">Hagyd meg az elérhetőséged, és felvesszük veled a kapcsolatot:</div>`;
+  html += `<div class="contact-fields">`;
+  html += `<input type="text" class="contact-input" data-qid="${q.id}_name" autocomplete="name" placeholder="Neved" value="${nameVal}">`;
+  html += `<input type="email" class="contact-input" data-qid="${q.id}_email" autocomplete="email" inputmode="email" placeholder="E-mail címed" value="${emailVal}">`;
+  html += `<input type="tel" class="contact-input" data-qid="${q.id}_phone" autocomplete="tel" inputmode="tel" placeholder="Telefonszámod (opcionális)" value="${phoneVal}">`;
+  html += `</div>`;
+  html += `<div class="error-msg" data-contact-error="${q.id}" style="display:none;">Kérlek adj meg egy érvényes e-mail címet.</div>`;
+  html += `</div>`;
+  return html;
+}
+
 function renderNumberYesNo(q) {
   const numVal = getR(q.id+'_num') || '';
   const ynVal = getR(q.id+'_yn');
@@ -1152,6 +1209,7 @@ function renderQuestion(q) {
     case 'number': html += renderNumber(q); break;
     case 'yesno': html += renderYesNo(q); break;
     case 'yesno_text': html += renderYesNoText(q); break;
+    case 'yesno_contact': html += renderYesNoContact(q); break;
     case 'number_yesno': html += renderNumberYesNo(q); break;
     case 'dropdown': html += renderDropdown(q); break;
     case 'percentage': html += renderPercentage(q); break;
@@ -1221,6 +1279,13 @@ function renderRadar() {
 }
 
 function renderThankYou() {
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const name = (getR('q10_name') || '').trim();
+  const optedIn = getR('q10') === 'Igen';
+  const title = name ? `Köszönjük, ${esc(name)}!` : 'Köszönjük!';
+  const followup = optedIn
+    ? 'Jelezted, hogy szeretnél mélyebben beszélni valakivel – hamarosan felvesszük veled a kapcsolatot a megadott elérhetőségeden.'
+    : 'Ha később mégis szeretnél mélyebben beszélni valakivel, bármikor visszatérhetsz.';
   return `
     <div class="thankyou">
       <div class="thankyou-icon">
@@ -1228,9 +1293,9 @@ function renderThankYou() {
           <polyline points="20 6 9 17 4 12"/>
         </svg>
       </div>
-      <div class="screen-title">Köszönjük!</div>
+      <div class="screen-title">${title}</div>
       <div class="screen-subtitle">A válaszaid rögzítésre kerültek.</div>
-      <div class="welcome-desc" style="margin-top:16px;">Amennyiben jelezted, hogy szeretnél mélyebben beszélni valakivel, hamarosan felvesszük veled a kapcsolatot.</div>
+      <div class="welcome-desc" style="margin-top:16px;">${followup}</div>
       <button class="btn-restart" onclick="localStorage.clear();location.reload();">Újrakezdés</button>
     </div>`;
 }
@@ -1544,6 +1609,29 @@ function validateScreen() {
       setTimeout(() => group.classList.remove('shake'), 500);
     }
   });
+
+  // Contact capture: if user opted in (q10 = affirmative), require a valid email
+  def.questions.forEach(qid => {
+    const q = qMap[qid];
+    if (q.type !== 'yesno_contact') return;
+    const opts = q.yesnoOptions || ['Igen','Nem'];
+    if (getR(qid) !== opts[0]) return;
+    const email = (getR(qid+'_email') || '').trim();
+    const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!ok) {
+      valid = false;
+      const block = $(`[data-contact="${qid}"]`);
+      if (block) {
+        const emailInput = block.querySelector(`[data-qid="${qid}_email"]`);
+        const errEl = block.querySelector('[data-contact-error]');
+        if (emailInput) emailInput.classList.add('input-error');
+        if (errEl) errEl.style.display = 'block';
+        block.classList.add('shake');
+        setTimeout(() => block.classList.remove('shake'), 500);
+      }
+    }
+  });
+
   return valid;
 }
 
@@ -1685,6 +1773,20 @@ function setupScreenListeners() {
           cond.classList.toggle('visible', showText);
         }
 
+        // Handle conditional contact fields (q10)
+        const contact = $(`[data-contact="${qid}"]`);
+        if (contact) {
+          const baseQ = qMap[qid];
+          const opts = baseQ?.yesnoOptions || ['Igen','Nem'];
+          const showContact = btn.dataset.val === opts[0];
+          contact.classList.toggle('visible', showContact);
+          if (!showContact) {
+            const errEl = contact.querySelector('[data-contact-error]');
+            if (errEl) errEl.style.display = 'none';
+            contact.querySelectorAll('.contact-input').forEach(i => i.classList.remove('input-error'));
+          }
+        }
+
         // Auto-advance for simple yesno (not yesno_text)
         const q = qMap[qid];
         if (q && q.type === 'yesno') {
@@ -1710,6 +1812,19 @@ function setupScreenListeners() {
     inp.addEventListener('input', () => {
       setR(inp.dataset.qid, inp.value);
       inp.classList.remove('input-error');
+    });
+  });
+
+  // Contact inputs (q10)
+  $$('.contact-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      setR(inp.dataset.qid, inp.value);
+      inp.classList.remove('input-error');
+      const block = inp.closest('.conditional-contact');
+      if (block) {
+        const e = block.querySelector('[data-contact-error]');
+        if (e) e.style.display = 'none';
+      }
     });
   });
 
