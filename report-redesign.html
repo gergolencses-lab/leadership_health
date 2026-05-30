@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riport redesign — gauge prototípus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#e9e6dd;font-family:'Source Sans 3',sans-serif;color:#2d3a2b;padding:30px;display:flex;justify-content:center;}
+  .page{width:760px;background:#faf9f6;padding:46px;box-shadow:0 10px 40px rgba(40,50,30,.12);}
+  .r-title{font-family:'Libre Baskerville',serif;font-size:26px;color:#2d4a2b;}
+  .r-meta{color:#7d8471;font-size:14px;margin-top:4px;}
+  .sec-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#4a7c59;font-weight:600;margin:26px 0 4px;}
+
+  /* ===== GAUGE ROW ===== */
+  .gauges{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px;}
+  .gauge-card{text-align:center;}
+  .gauge-card .g-title{font-size:11.5px;font-weight:600;color:#2d4a2b;height:28px;display:flex;align-items:flex-end;justify-content:center;line-height:1.15;}
+  .gauge-card svg{width:100%;height:auto;display:block;margin-top:2px;}
+  .g-score{font-family:'Libre Baskerville',serif;font-size:20px;color:#2d4a2b;line-height:1;margin-top:-6px;}
+  .g-cat{font-size:10px;font-weight:600;margin-top:2px;}
+  .g-cat.eross{color:#3a7d4e;}
+  .g-cat.kieg{color:#c98a2f;}
+  .g-cat.fejl{color:#c0392b;}
+  .legend{font-size:11px;color:#7d8471;margin-top:14px;}
+
+  /* ===== Q&A ===== */
+  .qblock-title{font-family:'Libre Baskerville',serif;font-size:17px;color:#2d4a2b;border-bottom:2px solid #cdd8c6;padding-bottom:5px;margin:22px 0 12px;}
+  .qa{margin:14px 0;}
+  .qa .q{font-size:12.5px;color:#5c6354;margin-bottom:5px;}
+  .qa-scale{display:flex;align-items:center;gap:10px;}
+  .qa-bar{display:flex;gap:3px;flex:1;}
+  .qa-bar i{height:11px;flex:1;border-radius:2px;background:#e3e9df;}
+  .qa-val{font-family:'Libre Baskerville',serif;font-size:15px;color:#2d4a2b;width:54px;text-align:right;}
+  .qa-text{border:1px solid #cdd8c6;border-radius:9px;padding:11px 14px;font-size:14px;color:#2d3a2b;line-height:1.5;background:#fff;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="r-title">Vezetői Jóllét — Személyes visszajelzés</div>
+  <div class="r-meta">Tóth Ödön · Ügyvezető igazgató · 2026. 05. 30.</div>
+
+  <div class="sec-label">Áttekintés — öt dimenzió egy pillanatképben</div>
+  <div class="gauges" id="gauges"></div>
+  <div class="legend">Skála 1–10 · &lt;4 fejlesztendő · 4–6,9 kiegyensúlyozott · 7-től erősség.</div>
+
+  <div class="qblock-title">I. Szembenézés</div>
+  <div id="qa"></div>
+</div>
+
+<script>
+// piros -> zöld 10 színskála (a mostani sáv-színek megőrzése)
+const SCALE10 = ['#d64a3b','#df6a37','#e7883a','#edaa3f','#e8c64a','#cbc54e','#a3c158','#79b266','#52a061','#3a7d4e'];
+function bandColor(seg){ return SCALE10[Math.max(0,Math.min(9,seg-1))]; }
+function cat(v){ return v>=7?['erősség','eross']:(v>=4?['kiegyensúlyozott','kieg']:['fejlesztendő','fejl']); }
+
+function pol(cx,cy,r,deg){ const a=deg*Math.PI/180; return [cx+r*Math.cos(a), cy-r*Math.sin(a)]; }
+function arc(cx,cy,r,a1,a2){ const [x1,y1]=pol(cx,cy,r,a1),[x2,y2]=pol(cx,cy,r,a2); return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`; }
+
+function gauge(score){
+  const cx=80, cy=78, R=58;
+  const filledSw=13, emptySw=3;
+  const filled = Math.round(Math.max(0,Math.min(10,score)));   // ennyi szegmens színes
+  let segs='';
+  for(let i=1;i<=10;i++){
+    const a1 = 180 - (i-1)*18 - 1.6;   // kis rés a szegmensek közt
+    const a2 = 180 - i*18 + 1.6;
+    if(i<=filled){
+      segs += `<path d="${arc(cx,cy,R,a1,a2)}" stroke="${bandColor(i)}" stroke-width="${filledSw}" fill="none" stroke-linecap="butt"/>`;
+    } else {
+      // a maradék csak vékony körvonal
+      segs += `<path d="${arc(cx,cy,R,a1,a2)}" stroke="#d3d8cc" stroke-width="${emptySw}" fill="none" stroke-linecap="round"/>`;
+    }
+  }
+  // a pontszám a körív közepébe
+  return `<svg viewBox="0 0 160 88">
+    ${segs}
+    <text x="${cx}" y="${cy-2}" text-anchor="middle" font-family="'Libre Baskerville', serif" font-size="23" fill="#2d4a2b">${score.toFixed(1)}</text>
+  </svg>`;
+}
+
+const DIMS = [
+  {t:'Szembenézés', v:7.0},
+  {t:'Önismeret', v:5.3},
+  {t:'Purpose', v:8.0},
+  {t:'Törzs', v:7.3},
+  {t:'Tudatosság', v:6.7},
+];
+document.getElementById('gauges').innerHTML = DIMS.map(d=>{
+  const [clabel,ccls]=cat(d.v);
+  return `<div class="gauge-card">
+    <div class="g-title">${d.t}</div>
+    ${gauge(d.v)}
+    <div class="g-cat ${ccls}">${clabel}</div>
+  </div>`;
+}).join('');
+
+// Q&A — skálakérdés = "vonalas" sáv (mint a régi dimenziók), szöveges = szövegdoboz
+function scaleBar(v){
+  let cells='';
+  for(let i=1;i<=10;i++){ cells += `<i style="background:${i<=Math.round(v)?bandColor(i):'#e3e9df'}"></i>`; }
+  return `<div class="qa-scale"><div class="qa-bar">${cells}</div><div class="qa-val">${v} / 10</div></div>`;
+}
+const QA = [
+  {q:'Mennyire vagy elégedett az életeddel összességében jelenleg?', type:'scale', v:8},
+  {q:'Mennyire tudod „letenni" a munkát, amikor nem vagy munkaidőben?', type:'scale', v:6},
+  {q:'Mi az, ami most a legtöbb energiádat elviszi – munkában és magánéletben?', type:'text', v:'Túl sok megbeszélés és a felelősség súlya — kevés a csendes, mély munka.'},
+  {q:'Ha most őszintén végiggondolod: miben kellene a legtöbbet változtatnod az életedben?', type:'text', v:'Több időt magamra; egy igazán működő határrendszer és őszintébb határok.'},
+];
+document.getElementById('qa').innerHTML = QA.map(item=>`
+  <div class="qa">
+    <div class="q">${item.q}</div>
+    ${item.type==='scale' ? scaleBar(item.v) : `<div class="qa-text">${item.v}</div>`}
+  </div>`).join('');
+</script>
+</body>
+</html>

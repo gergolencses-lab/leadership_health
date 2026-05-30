@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Nunito:wght@400;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
-<!-- Report PDF generation (client-side): AcroForm sablon kitöltése pdf-lib-bel -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js" defer></script>
+<!-- Report PDF generation (client-side): rajzolt riport (gauge + sávok) → html2canvas → jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
 /* ========== THEMES ========== */
 :root, [data-theme="forest"] {
@@ -1945,70 +1945,116 @@ const DIM_LABELS = {facing:'Szembenézés', self:'Önismeret', purpose:'Purpose'
 const DIM_ORDER = ['facing','self','purpose','tribe','consciousness'];
 function scoreBand(v) { return v < 4 ? 'fejlesztendő' : (v < 7 ? 'kiegyensúlyozott' : 'erősség'); }
 
-// A sablon 17 kérdés-mezője → kérdőív q-id (a sablon nyomtatott szövegei alapján)
-const FORM_Q_MAP = {
-  f_qi_1:'q11', f_qi_2:'q14', f_qi_3:'q16', f_qi_4:'q20',
-  f_qii_1:'q21', f_qii_2:'q23', f_qii_3:'q24', f_qii_4:'q27', f_qii_5:'q30',
-  f_qiii_1:'q32', f_qiii_2:'q36',
-  f_qiv_1:'q42', f_qiv_2:'q45', f_qiv_3:'q47',
-  f_qv_1:'q51', f_qv_2:'q53', f_qv_3:'q59',
-};
-// scores kulcs → a sablon mező-szuffixe
-const FIELD_DIM = { facing:'szembenezes', self:'onismeret', purpose:'purpose', tribe:'torzs', consciousness:'tudatossag' };
+// A riportban megjelenő 17 kérdés blokkonként (skála = sáv, szöveg = doboz)
+const REPORT_BLOCKS = [
+  { block:'facing',        qids:['q11','q14','q16','q20'] },
+  { block:'self',          qids:['q21','q23','q24','q27','q30'] },
+  { block:'purpose',       qids:['q32','q36'] },
+  { block:'tribe',         qids:['q42','q45','q47'] },
+  { block:'consciousness', qids:['q51','q53','q59'] },
+];
+// piros → zöld 10 színskála (gauge + sávok)
+const SCALE10 = ['#d64a3b','#df6a37','#e7883a','#edaa3f','#e8c64a','#cbc54e','#a3c158','#79b266','#52a061','#3a7d4e'];
+const bandColor = i => SCALE10[Math.max(0, Math.min(9, i - 1))];
 
-function formAnswer(qid) { const v = getR(qid); return (v === undefined || v === null) ? '' : String(v).trim(); }
-
-function u8ToBase64(u8) {
-  let s = ''; const chunk = 0x8000;
-  for (let i = 0; i < u8.length; i += chunk) s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
-  return btoa(s);
+// Gauge canvasra rajzolva (html2canvas megbízhatóan átveszi a canvas tartalmát)
+function gaugeCanvas(score) {
+  const W = 160, H = 88, dpr = 2, cx = 80, cy = 78, R = 58, filledSw = 13, emptySw = 3, gap = 0.03;
+  const c = document.createElement('canvas');
+  c.width = W * dpr; c.height = H * dpr;
+  c.style.width = '100%'; c.style.height = 'auto'; c.style.maxWidth = '150px'; c.style.display = 'inline-block';
+  const ctx = c.getContext('2d'); ctx.scale(dpr, dpr);
+  const filled = Math.max(0, Math.min(10, Math.round(score)));
+  for (let i = 1; i <= 10; i++) {
+    const a1 = Math.PI + ((i - 1) / 10) * Math.PI + gap;   // felső félkör: π (bal) → 2π (jobb)
+    const a2 = Math.PI + (i / 10) * Math.PI - gap;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, a1, a2, false);
+    if (i <= filled) { ctx.lineWidth = filledSw; ctx.strokeStyle = bandColor(i); ctx.lineCap = 'butt'; }
+    else { ctx.lineWidth = emptySw; ctx.strokeStyle = '#d3d8cc'; ctx.lineCap = 'round'; }
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#2d4a2b';
+  ctx.font = "700 23px 'Libre Baskerville', Georgia, serif";
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(score.toFixed(1), cx, cy - 2);
+  return c;
 }
 
-// Az "üres sablon" AcroForm PDF kitöltése a válaszokkal, majd flatten → letölthető PDF
-async function fillReportPDF(scores) {
-  const [tplBytes, fontBytes] = await Promise.all([
-    fetch('report/urlap.pdf').then(r => r.arrayBuffer()),
-    fetch('report/IBMPlexSans-Regular.ttf').then(r => r.arrayBuffer()),
-  ]);
-  const pdf = await PDFLib.PDFDocument.load(tplBytes);
-  pdf.registerFontkit(fontkit);
-  const font = await pdf.embedFont(fontBytes, { subset: true });
-  const form = pdf.getForm();
+function scaleBarHTML(v) {
+  const n = Math.round(v);
+  let cells = '';
+  for (let i = 1; i <= 10; i++) cells += `<i style="height:11px;flex:1;border-radius:2px;background:${i<=n?bandColor(i):'#e3e9df'}"></i>`;
+  return `<div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:3px;flex:1;">${cells}</div><div style="font-family:'Libre Baskerville',serif;font-size:15px;color:#2d4a2b;width:54px;text-align:right;">${v} / 10</div></div>`;
+}
 
-  const setText = (name, val) => { try { form.getTextField(name).setText(val == null ? '' : String(val)); } catch (e) {} };
-  const checkBar = (name) => { try { form.getCheckBox(name).check(); } catch (e) {} };
+function buildReportNode(scores) {
+  const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const name = (getR('q10_name')||'').trim();
+  const role = (getR('q1')||'').trim();
+  const dateStr = new Date().toLocaleDateString('hu-HU');
+  const catCol = v => v >= 7 ? '#3a7d4e' : (v >= 4 ? '#c98a2f' : '#c0392b');
 
-  // fejléc
-  setText('f_name', (getR('q10_name')||'').trim());
-  setText('f_role', (getR('q1')||'').trim());
-  setText('f_date', new Date().toLocaleDateString('hu-HU'));
-
-  // dimenziók: pontszám + kategória + 10-szegmenses sáv (round(score) pipa)
-  for (const [k, suf] of Object.entries(FIELD_DIM)) {
+  const gauges = DIM_ORDER.map(k => {
     const v = scores[k];
-    setText('f_score_' + suf, v.toFixed(1));
-    setText('f_cat_' + suf, scoreBand(v));
-    const n = Math.max(0, Math.min(10, Math.round(v)));
-    for (let i = 1; i <= n; i++) checkBar(`f_bar_${suf}_${i}`);
-  }
+    return `<div style="text-align:center;">
+      <div style="font-size:11.5px;font-weight:600;color:#2d4a2b;min-height:28px;display:flex;align-items:flex-end;justify-content:center;line-height:1.15;">${DIM_LABELS[k]}</div>
+      <div class="gph" data-v="${v}"></div>
+      <div style="font-size:10px;font-weight:600;margin-top:2px;color:${catCol(v)};">${scoreBand(v)}</div>
+    </div>`;
+  }).join('');
 
-  // 17 kérdés-válasz
-  for (const [field, qid] of Object.entries(FORM_Q_MAP)) setText(field, formAnswer(qid));
+  const blocks = REPORT_BLOCKS.map(b => {
+    const items = b.qids.map(qid => {
+      const q = qMap[qid]; if (!q) return '';
+      const v = getR(qid);
+      const has = v !== undefined && v !== null && String(v).trim() !== '';
+      const answer = (q.type === 'scale')
+        ? (has ? scaleBarHTML(Number(v)) : '<div style="color:#9aa392;font-size:13px;">—</div>')
+        : `<div style="border:1px solid #cdd8c6;border-radius:9px;padding:11px 14px;font-size:14px;color:#2d3a2b;line-height:1.5;background:#fff;white-space:pre-wrap;">${has ? esc(String(v)) : '—'}</div>`;
+      return `<div style="margin:14px 0;"><div style="font-size:12.5px;color:#5c6354;margin-bottom:5px;">${esc(q.label)}</div>${answer}</div>`;
+    }).join('');
+    return `<div style="margin-top:22px;page-break-inside:avoid;"><div style="font-family:'Libre Baskerville',serif;font-size:17px;color:#2d4a2b;border-bottom:2px solid #cdd8c6;padding-bottom:5px;margin-bottom:8px;">${BLOCKS[b.block].num} ${esc(BLOCKS[b.block].title)}</div>${items}</div>`;
+  }).join('');
 
-  // megjelenés a beágyazott magyar betűvel, majd lapítás az univerzális rendereléshez
-  try { form.updateFieldAppearances(font); } catch (e) {}
-  try { form.flatten(); } catch (e) {}
+  const node = document.createElement('div');
+  node.style.cssText = 'position:fixed;left:-99999px;top:0;width:760px;background:#faf9f6;color:#2d3a2b;font-family:\'Source Sans 3\',sans-serif;padding:46px;box-sizing:border-box;';
+  node.innerHTML = `
+    <div style="font-family:'Libre Baskerville',serif;font-size:26px;color:#2d4a2b;line-height:1.25;">Vezetői Jóllét — Személyes visszajelzés</div>
+    <div style="color:#7d8471;font-size:14px;margin-top:4px;">${[name && esc(name), role && esc(role), dateStr].filter(Boolean).join(' · ')}</div>
+    <div style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#4a7c59;font-weight:600;margin:26px 0 6px;">Áttekintés — öt dimenzió egy pillanatképben</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">${gauges}</div>
+    <div style="font-size:11px;color:#7d8471;margin-top:12px;">Skála 1–10 · &lt;4 fejlesztendő · 4–6,9 kiegyensúlyozott · 7-től erősség. A pontszámok a skálás kérdésekből számolódnak; a szöveges válaszaid az önreflexiódat tükrözik.</div>
+    ${blocks}
+    <div style="margin-top:30px;padding-top:12px;border-top:1px solid #cdd8c6;font-size:11px;color:#9aa392;">Szigorúan bizalmas — csak neked szól. Vezetői Jóllét Szűrés · a válaszokat anonim módon, kutatási céllal kezeljük.</div>
+  `;
+  node.querySelectorAll('.gph').forEach(ph => ph.appendChild(gaugeCanvas(Number(ph.dataset.v))));
+  return node;
+}
 
-  const bytes = await pdf.save();
+async function renderReportPDF(node) {
+  const canvas = await html2canvas(node, { scale: 2, backgroundColor: '#faf9f6', useCORS: true });
+  const Ctor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+  const pdf = new Ctor('p', 'mm', 'a4');
+  const pageW = 210, pageH = 297;
+  const imgData = canvas.toDataURL('image/jpeg', 0.92);
+  const imgH = canvas.height * pageW / canvas.width;
+  let position = 0, heightLeft = imgH;
+  pdf.addImage(imgData, 'JPEG', 0, position, pageW, imgH);
+  heightLeft -= pageH;
+  while (heightLeft > 0) { position -= pageH; pdf.addPage(); pdf.addImage(imgData, 'JPEG', 0, position, pageW, imgH); heightLeft -= pageH; }
   const slug = (getR('q10_name')||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'kitolto';
   const filename = `vezetoi-jollet-${slug}-${new Date().toISOString().slice(0,10)}.pdf`;
-  return { blob: new Blob([bytes], { type: 'application/pdf' }), base64: u8ToBase64(bytes), filename };
+  return { blob: pdf.output('blob'), base64: pdf.output('datauristring').split(',')[1], filename };
 }
 
 async function deliverReport() {
   try {
     const scores = computeScores();
-    const out = await fillReportPDF(scores);
+    const node = buildReportNode(scores);
+    document.body.appendChild(node);
+    let out;
+    try { out = await renderReportPDF(node); } finally { node.remove(); }
     lastReport = out;
     const btn = document.getElementById('btnDownloadReport');
     if (btn) btn.disabled = false;
