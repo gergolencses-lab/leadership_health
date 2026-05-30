@@ -1,0 +1,15 @@
+# Version control
+.git
+.gitignore
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Editor / OS junk
+*.swp
+*~
+Thumbs.db
+
+# GitHub specific
+.github
