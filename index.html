@@ -23,7 +23,7 @@
   --surface: #eef3ec;
   --bg: #faf9f6;
   --text: #2d4a2b;
-  --text-secondary: #7d8471;
+  --text-secondary: #5c6354;
   --muted: #c2ccba;
   --error: #C0392B;
   --font-heading: 'Libre Baskerville', serif;
@@ -1340,7 +1340,7 @@ function renderWelcome() {
       <div class="screen-title">Vezetői Jóllét</div>
       <div class="screen-subtitle">Szűrés</div>
       <div class="welcome-desc">Egy rövid, fókuszált önvizsgálat, kifejezetten vezetői szerepekre tervezve. Öt dimenzióban vizsgáljuk a jelenlegi állapotodat.</div>
-      <div class="welcome-badge">~15 perc</div>
+      <div class="welcome-badge">20–25 perc</div>
       <div class="theme-switcher">
         <div class="theme-dot${state.theme==='forest'?' active':''}" data-theme="forest" title="Grounded"></div>
         <div class="theme-dot${state.theme==='simple'?' active':''}" data-theme="simple" title="Simple"></div>
@@ -1373,7 +1373,7 @@ function renderRadar() {
     scoreRows += `
       <div class="radar-score-row">
         <span class="radar-score-label">${l.label}</span>
-        <div class="radar-score-bar"><div class="radar-score-bar-fill" style="width:${pct}%"></div></div>
+        <div class="radar-score-bar"><div class="radar-score-bar-fill" style="width:${pct}%;background:${bandColor(Math.round(s))}"></div></div>
         <span class="radar-score-value">${s.toFixed(1)}</span>
       </div>`;
   });
@@ -1660,8 +1660,8 @@ function drawRadar(canvas) {
     const x = cx + r * Math.cos(angle);
     const y = cy + r * Math.sin(angle);
     ctx.beginPath();
-    ctx.arc(x, y, 6, 0, Math.PI*2);
-    ctx.fillStyle = accentColor;
+    ctx.arc(x, y, 7, 0, Math.PI*2);
+    ctx.fillStyle = bandColor(Math.round(scores[key]));   // piros→zöld, mint a PDF gauge-ök
     ctx.fill();
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2;
