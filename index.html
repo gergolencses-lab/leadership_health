@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Nunito:wght@400;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
-<!-- Report PDF generation (client-side) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<!-- Report PDF generation (client-side): AcroForm sablon kitöltése pdf-lib-bel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js" defer></script>
 <style>
 /* ========== THEMES ========== */
 :root, [data-theme="forest"] {
@@ -922,6 +922,31 @@ body.segment-active .screen { transform: none !important; }
 .seg-time { font-size: .78rem; color: rgba(255,255,255,0.55); font-variant-numeric: tabular-nums; }
 .seg-next { margin-left: auto; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22); color: #fff; border-radius: 22px; padding: 10px 20px; font-size: .9rem; font-weight: 600; cursor: pointer; font-family: var(--font-body); }
 .seg-next:hover { background: rgba(255,255,255,0.18); }
+
+/* ========== PRIVACY POLICY (link + overlay page) ========== */
+.policy-link { color: var(--accent); font-weight: 600; text-decoration: underline; cursor: pointer; }
+.policy-link:hover { color: var(--primary); }
+.privacy-overlay { position: fixed; inset: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--bg); z-index: 300; display: none; flex-direction: column; }
+.privacy-overlay.open { display: flex; }
+.privacy-topbar { position: sticky; top: 0; display: flex; align-items: center; padding: 14px 18px; background: var(--bg); border-bottom: 1px solid color-mix(in srgb, var(--muted) 60%, transparent); z-index: 2; }
+.privacy-back { display: inline-flex; align-items: center; gap: 6px; border: none; background: transparent; color: var(--text); font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; cursor: pointer; padding: 6px 4px; }
+.privacy-back svg { width: 20px; height: 20px; }
+.privacy-scroll { flex: 1; overflow-y: auto; padding: 20px 22px max(40px, env(safe-area-inset-bottom)); }
+.privacy-content { font-family: var(--font-body); color: var(--text); font-size: 0.9rem; line-height: 1.6; }
+.privacy-content h1 { font-family: var(--font-heading); font-size: 1.4rem; color: var(--primary); margin: 0 0 4px; line-height: 1.25; }
+.privacy-content .pc-sub { color: var(--text-secondary); font-style: italic; margin-bottom: 6px; }
+.privacy-content .pc-meta { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 18px; }
+.privacy-content h2 { font-family: var(--font-heading); font-size: 1.05rem; color: var(--primary); margin: 22px 0 6px; }
+.privacy-content h3 { font-size: 0.92rem; font-weight: 700; color: var(--text); margin: 14px 0 3px; }
+.privacy-content p { margin: 0 0 8px; }
+.privacy-content ul { margin: 0 0 10px; padding-left: 18px; }
+.privacy-content li { margin: 3px 0; }
+.privacy-content a { color: var(--accent); }
+.privacy-content .pc-kv { border: 1px solid var(--muted); border-radius: 10px; overflow: hidden; margin: 8px 0 12px; }
+.privacy-content .pc-kv > div { padding: 8px 12px; border-top: 1px solid color-mix(in srgb, var(--muted) 60%, transparent); }
+.privacy-content .pc-kv > div:first-child { border-top: none; }
+.privacy-content .pc-kv b { color: var(--text); display: block; font-size: 0.82rem; margin-bottom: 1px; }
+.privacy-content .pc-kv span { color: var(--text-secondary); font-size: 0.86rem; }
 </style>
 </head>
 <body>
@@ -1043,6 +1068,7 @@ const BLOCKS = {
 
 // ========== SCREEN DEFINITIONS ==========
 // ========== AUDIO SEGMENTS (Karafiáth Balázs) ==========
+const SEG_RATE = 1.15; // hang lejátszási sebesség — a lyric-sync média-időből számol, ezért automatikusan szinkronban marad
 const SEGMENTS = {
   seg1: {file:'audio/01-szembenezes.m4a', cues:'audio/01-szembenezes.json', label:'Bevezető'},
   seg2: {file:'audio/02-onismeret.m4a',   cues:'audio/02-onismeret.json',   label:'Átvezetés'},
@@ -1321,7 +1347,7 @@ function renderWelcome() {
       </div>
       <label class="privacy-check">
         <input type="checkbox" id="privacyCheck" ${state.privacyAccepted?'checked':''}>
-        <span>Megértettem, hogy ez egy bizalmas felmérés, és elfogadom az adatkezelési feltételeket.</span>
+        <span>Megértettem, hogy ez egy bizalmas felmérés, és elfogadom az <a href="#" class="policy-link" onclick="event.preventDefault();event.stopPropagation();openPrivacy();return false;">adatkezelési feltételeket</a>.</span>
       </label>
     </div>`;
 }
@@ -1433,6 +1459,8 @@ function initSegment(segId, autoplay) {
   teardownSegment();
   const cfg = SEGMENTS[segId];
   const audio = $('#segAudio');
+  audio.playbackRate = SEG_RATE;
+  try { audio.preservesPitch = true; } catch (e) {}
   const lyricsEl = $('#segLyrics');
   const st = {
     audio, lyricsEl,
@@ -1465,7 +1493,7 @@ function initSegment(segId, autoplay) {
       st.data = new Uint8Array(st.analyser.fftSize);
     } catch(e) {}
   }
-  function play() { initGraph(); if (st.ac && st.ac.state === 'suspended') st.ac.resume(); audio.play().catch(() => {}); }
+  function play() { initGraph(); if (st.ac && st.ac.state === 'suspended') st.ac.resume(); audio.playbackRate = SEG_RATE; audio.play().catch(() => {}); }
   function syncIcon() { st.playBtn.innerHTML = audio.paused ? SEG_PLAY : SEG_PAUSE; }
 
   function drawWave() {
@@ -1881,6 +1909,8 @@ function validateScreen() {
 }
 
 function goNext() {
+  const pov = document.getElementById('privacyOverlay');
+  if (pov && pov.classList.contains('open')) return;
   if (state.currentScreen === 0 && !state.privacyAccepted) return;
   if (!validateScreen()) return;
 
@@ -1915,84 +1945,70 @@ const DIM_LABELS = {facing:'Szembenézés', self:'Önismeret', purpose:'Purpose'
 const DIM_ORDER = ['facing','self','purpose','tribe','consciousness'];
 function scoreBand(v) { return v < 4 ? 'fejlesztendő' : (v < 7 ? 'kiegyensúlyozott' : 'erősség'); }
 
-function reportAnswer(q) {
-  const v = getR(q.id);
-  const has = v !== undefined && v !== null && String(v).trim() !== '';
-  switch (q.type) {
-    case 'scale': return has ? `${v} / 10` : '';
-    case 'percentage': return has ? `${v}%` : '';
-    case 'yesno_text': { const t = (getR(q.id+'_text')||'').trim(); return has ? (v + (t ? ' — ' + t : '')) : ''; }
-    case 'number_yesno': { const nx = getR(q.id+'_num'); const yn = getR(q.id+'_yn'); const p = []; if (nx) p.push(nx + (q.numberLabel ? ' ' + q.numberLabel : '')); if (yn) p.push(yn); return p.join(' · '); }
-    case 'yesno_contact': return '';
-    default: return has ? String(v) : '';
+// A sablon 17 kérdés-mezője → kérdőív q-id (a sablon nyomtatott szövegei alapján)
+const FORM_Q_MAP = {
+  f_qi_1:'q11', f_qi_2:'q14', f_qi_3:'q16', f_qi_4:'q20',
+  f_qii_1:'q21', f_qii_2:'q23', f_qii_3:'q24', f_qii_4:'q27', f_qii_5:'q30',
+  f_qiii_1:'q32', f_qiii_2:'q36',
+  f_qiv_1:'q42', f_qiv_2:'q45', f_qiv_3:'q47',
+  f_qv_1:'q51', f_qv_2:'q53', f_qv_3:'q59',
+};
+// scores kulcs → a sablon mező-szuffixe
+const FIELD_DIM = { facing:'szembenezes', self:'onismeret', purpose:'purpose', tribe:'torzs', consciousness:'tudatossag' };
+
+function formAnswer(qid) { const v = getR(qid); return (v === undefined || v === null) ? '' : String(v).trim(); }
+
+function u8ToBase64(u8) {
+  let s = ''; const chunk = 0x8000;
+  for (let i = 0; i < u8.length; i += chunk) s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+  return btoa(s);
+}
+
+// Az "üres sablon" AcroForm PDF kitöltése a válaszokkal, majd flatten → letölthető PDF
+async function fillReportPDF(scores) {
+  const [tplBytes, fontBytes] = await Promise.all([
+    fetch('report/urlap.pdf').then(r => r.arrayBuffer()),
+    fetch('report/IBMPlexSans-Regular.ttf').then(r => r.arrayBuffer()),
+  ]);
+  const pdf = await PDFLib.PDFDocument.load(tplBytes);
+  pdf.registerFontkit(fontkit);
+  const font = await pdf.embedFont(fontBytes, { subset: true });
+  const form = pdf.getForm();
+
+  const setText = (name, val) => { try { form.getTextField(name).setText(val == null ? '' : String(val)); } catch (e) {} };
+  const checkBar = (name) => { try { form.getCheckBox(name).check(); } catch (e) {} };
+
+  // fejléc
+  setText('f_name', (getR('q10_name')||'').trim());
+  setText('f_role', (getR('q1')||'').trim());
+  setText('f_date', new Date().toLocaleDateString('hu-HU'));
+
+  // dimenziók: pontszám + kategória + 10-szegmenses sáv (round(score) pipa)
+  for (const [k, suf] of Object.entries(FIELD_DIM)) {
+    const v = scores[k];
+    setText('f_score_' + suf, v.toFixed(1));
+    setText('f_cat_' + suf, scoreBand(v));
+    const n = Math.max(0, Math.min(10, Math.round(v)));
+    for (let i = 1; i <= n; i++) checkBar(`f_bar_${suf}_${i}`);
   }
-}
 
-function buildReportNode(scores) {
-  const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-  const name = (getR('q10_name')||'').trim();
-  const role = (getR('q1')||'').trim();
-  // radar → offscreen canvas → image
-  const rc = document.createElement('canvas'); rc.width = 680; rc.height = 680;
-  drawRadar(rc);
-  const radarImg = rc.toDataURL('image/png');
+  // 17 kérdés-válasz
+  for (const [field, qid] of Object.entries(FORM_Q_MAP)) setText(field, formAnswer(qid));
 
-  const scoreRows = DIM_ORDER.map(k => {
-    const v = scores[k]; const pct = (v/10*100).toFixed(0);
-    return `<div style="display:flex;align-items:center;gap:12px;margin:7px 0;">
-      <div style="flex:0 0 150px;font-weight:600;color:#2d4a2b;">${DIM_LABELS[k]}</div>
-      <div style="flex:1;height:10px;background:#e3e9df;border-radius:5px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:#4a7c59;"></div></div>
-      <div style="flex:0 0 130px;text-align:right;color:#4a7c59;font-weight:700;">${v.toFixed(1)} · ${scoreBand(v)}</div>
-    </div>`;
-  }).join('');
+  // megjelenés a beágyazott magyar betűvel, majd lapítás az univerzális rendereléshez
+  try { form.updateFieldAppearances(font); } catch (e) {}
+  try { form.flatten(); } catch (e) {}
 
-  const answerSections = DIM_ORDER.map(k => {
-    const items = QUESTIONS.filter(q => q.block === k).map(q => {
-      const a = reportAnswer(q); if (!a) return '';
-      return `<div style="margin:10px 0;"><div style="font-size:12px;color:#7d8471;">${esc(q.label)}</div><div style="font-size:14px;color:#2d3a2b;white-space:pre-wrap;line-height:1.5;">${esc(a)}</div></div>`;
-    }).filter(Boolean).join('');
-    if (!items) return '';
-    return `<div style="margin-top:24px;page-break-inside:avoid;"><div style="font-family:'Libre Baskerville',serif;font-size:17px;color:#2d4a2b;border-bottom:2px solid #cdd8c6;padding-bottom:5px;margin-bottom:8px;">${BLOCKS[k].num} ${esc(BLOCKS[k].title)}</div>${items}</div>`;
-  }).join('');
-
-  const dateStr = new Date().toLocaleDateString('hu-HU');
-  const node = document.createElement('div');
-  node.style.cssText = 'position:fixed;left:-99999px;top:0;width:760px;background:#faf9f6;color:#2d3a2b;font-family:\'Source Sans 3\',sans-serif;padding:48px;box-sizing:border-box;';
-  node.innerHTML = `
-    <div style="font-family:'Libre Baskerville',serif;font-size:26px;color:#2d4a2b;line-height:1.25;">Vezetői Jóllét — Személyes visszajelzés</div>
-    <div style="color:#7d8471;margin-top:4px;font-size:14px;">${[name && esc(name), role && esc(role), dateStr].filter(Boolean).join(' · ')}</div>
-    <div style="text-align:center;margin:18px 0 4px;"><img src="${radarImg}" style="width:340px;height:340px;" alt="Jóllét térkép"></div>
-    <div style="margin-top:6px;">${scoreRows}</div>
-    <div style="font-size:11.5px;color:#7d8471;margin-top:8px;">Skála 1–10 · &lt;4 fejlesztendő · 4–6,9 kiegyensúlyozott · ≥7 erősség. A pontszámok a skálás kérdésekből számolódnak; a szöveges válaszaid az önreflexiódat tükrözik vissza.</div>
-    ${answerSections}
-    <div style="margin-top:30px;padding-top:12px;border-top:1px solid #cdd8c6;font-size:11px;color:#9aa392;">Szigorúan bizalmas — csak neked szól. Vezetői Jóllét Szűrés · a válaszokat anonim módon, kutatási céllal kezeljük.</div>
-  `;
-  return node;
-}
-
-async function renderReportPDF(node) {
-  const canvas = await html2canvas(node, { scale: 2, backgroundColor: '#faf9f6', useCORS: true });
-  const Ctor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
-  const pdf = new Ctor('p', 'mm', 'a4');
-  const pageW = 210, pageH = 297;
-  const imgData = canvas.toDataURL('image/jpeg', 0.92);
-  const imgH = canvas.height * pageW / canvas.width;
-  let position = 0, heightLeft = imgH;
-  pdf.addImage(imgData, 'JPEG', 0, position, pageW, imgH);
-  heightLeft -= pageH;
-  while (heightLeft > 0) { position -= pageH; pdf.addPage(); pdf.addImage(imgData, 'JPEG', 0, position, pageW, imgH); heightLeft -= pageH; }
+  const bytes = await pdf.save();
   const slug = (getR('q10_name')||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'kitolto';
   const filename = `vezetoi-jollet-${slug}-${new Date().toISOString().slice(0,10)}.pdf`;
-  return { blob: pdf.output('blob'), base64: pdf.output('datauristring').split(',')[1], filename };
+  return { blob: new Blob([bytes], { type: 'application/pdf' }), base64: u8ToBase64(bytes), filename };
 }
 
 async function deliverReport() {
   try {
     const scores = computeScores();
-    const node = buildReportNode(scores);
-    document.body.appendChild(node);
-    let out;
-    try { out = await renderReportPDF(node); } finally { node.remove(); }
+    const out = await fillReportPDF(scores);
     lastReport = out;
     const btn = document.getElementById('btnDownloadReport');
     if (btn) btn.disabled = false;
@@ -2239,7 +2255,172 @@ function init() {
   }
 }
 
+// ========== ADATKEZELÉSI TÁJÉKOZTATÓ (overlay) ==========
+function renderPrivacyContent() {
+  return `
+    <h1>Adatkezelési tájékoztató</h1>
+    <div class="pc-sub">„Vezetői Jóllét Szűrés" webalkalmazás</div>
+    <div class="pc-meta">Verzió: 1.0 · Hatályos: 2026. május 29-től · Adószám: 32040201-2-41</div>
+
+    <h2>1. Az adatkezelő személye</h2>
+    <div class="pc-kv">
+      <div><b>Adatkezelő neve</b><span>ZEL Group Zártkörűen Működő Részvénytársaság (ZEL Group Zrt.)</span></div>
+      <div><b>Székhely</b><span>1054 Budapest, Hold utca 27.</span></div>
+      <div><b>Adatkezelési kapcsolattartó</b><span>Lencsés Gergő</span></div>
+      <div><b>E-mail</b><span><a href="mailto:gergo.lencses@zel-group.com">gergo.lencses@zel-group.com</a></span></div>
+      <div><b>Weboldal / app</b><span>https://gergolencses-lab.github.io/leadership_health/</span></div>
+    </div>
+
+    <h2>2. A kezelt személyes adatok köre</h2>
+    <p>A „Vezetői Jóllét Szűrés" alkalmazás az alábbi adatkategóriákat gyűjti a kitöltés során:</p>
+    <h3>2.1 Demográfiai és szakmai adatok</h3>
+    <ul>
+      <li>Jelenlegi munkakör, beosztás megnevezése</li>
+      <li>Iparág</li>
+      <li>Szervezet típusa (pl. tulajdonos-vezető, menedzseri pozíció, startup stb.)</li>
+      <li>Közvetlen beosztottak száma (sávban)</li>
+      <li>Vezetői évek száma</li>
+      <li>Munkavégzés helye szerinti ország</li>
+      <li>Életkor</li>
+      <li>Legmagasabb iskolai végzettség</li>
+    </ul>
+    <h3>2.2 Jóllét- és önértékelési adatok (kérdőíves válaszok)</h3>
+    <p>Az alkalmazás öt dimenzióban gyűjt önértékelési adatokat:</p>
+    <ul>
+      <li><b>Szembenézés:</b> általános élettel való elégedettség, munka–magánélet egyensúly, utolsó pihenés ideje, kiégéssel kapcsolatos tapasztalatok, alvásszokások, testi jelzések túlterhelés esetén.</li>
+      <li><b>Önismeret:</b> belső viselkedési minták, limitáló hiedelmek, segítségkérési képesség, önkritika, mások véleményének hatása.</li>
+      <li><b>Purpose (életcél):</b> élethivatás megfogalmazása, napi munka és cél kapcsolata, motiváció, öröklés, mortalitás-reflexió.</li>
+      <li><b>Törzs:</b> mélységi kapcsolatok megléte, csapatkultúra, egyedüllét érzete a vezető szerepben, törzs/közösség megléte.</li>
+      <li><b>Tudatosság és megújulás:</b> jelenléti szokások, flow-élmények, megújulást segítő gyakorlatok, elvonulás, időfelhasználás megoszlása.</li>
+    </ul>
+    <p>A válaszok egy része numerikus skála (1–10), más részük előre definiált lehetőségek közül való választás, kisebb részük szabad szöveges kifejtés.</p>
+    <h3>2.3 Kapcsolatfelvételi adatok (opcionális)</h3>
+    <p>Amennyiben a kitöltő az utolsó kérdésnél („Szeretnél mélyebben beszélni valakivel?") igenlő választ ad, az alábbi adatok kerülnek rögzítésre:</p>
+    <ul>
+      <li>Teljes név</li>
+      <li>E-mail cím (kötelező a kapcsolatfelvételhez)</li>
+      <li>Telefonszám (opcionális)</li>
+    </ul>
+    <p>Ezek az adatok kizárólag a kapcsolatfelvétel céljára kerülnek felhasználásra, és a 30 napos törlési ciklus részeként törlésre kerülnek.</p>
+    <h3>2.4 Munkamenet-metaadatok</h3>
+    <ul>
+      <li>Kitöltés megkezdésének időpontja (ISO 8601 timestamp)</li>
+      <li>Beküldés időpontja</li>
+      <li>Kitöltési idő (másodpercekben)</li>
+    </ul>
+    <p>Az alkalmazás automatikusan nem gyűjt IP-címet, böngészőazonosítót vagy sütit (cookies). A munkamenet-adatok ideiglenesen a felhasználó böngészőjének localStorage tárhelyén kerülnek eltárolásra (ld. 11. fejezet).</p>
+
+    <h2>3. Az adatkezelés célja és jogalapja</h2>
+    <div class="pc-kv">
+      <div><b>Személyes jóllét-térképen alapuló visszajelzés (radar chart) biztosítása a kitöltőnek</b><span>Hozzájárulás – GDPR 6. cikk (1) bek. a) pont</span></div>
+      <div><b>Kapcsolatfelvétel coaching vagy tanácsadói célból (kizárólag ha a kitöltő jelezte igényét)</b><span>Hozzájárulás – GDPR 6. cikk (1) bek. a) pont</span></div>
+      <div><b>Összesített, anonimizált szervezeti egészségmutatók kutatási célú elemzése</b><span>Jogos érdek – GDPR 6. cikk (1) bek. f) pont (az érintett azonosíthatósága megszűnt)</span></div>
+      <div><b>Különleges adatok kezelése (egészségügyi jellegű adatok)</b><span>Kifejezett hozzájárulás – GDPR 9. cikk (2) bek. a) pont</span></div>
+    </div>
+
+    <h2>5. Az adatkezelés időtartama</h2>
+    <div class="pc-kv">
+      <div><b>Kérdőíves válaszok (demográfiai és jóllét-adatok)</b><span>30 nap a beküldéstől számítva, ezt követően visszavonhatatlanul törlésre kerülnek</span></div>
+      <div><b>Kapcsolatfelvételi adatok (név, e-mail, telefon)</b><span>30 nap a beküldéstől számítva, majd törlés</span></div>
+      <div><b>Munkamenet-metaadatok (időbélyegek, kitöltési idő)</b><span>30 nap a beküldéstől számítva, majd törlés</span></div>
+      <div><b>Anonimizált összesített pontszámok (dimenziónkénti átlagok)</b><span>Határozatlan ideig megőrizhetők kutatási célból – az érintett ezen adatokon keresztül nem azonosítható</span></div>
+    </div>
+    <p>A 30 napos törlési ciklus automatikusan fut. A törölt adatok nem állíthatók vissza. Ha az érintett az adatok törlését a 30 napos határidő előtt kéri, az adatkezelő haladéktalanul, de legkésőbb 30 napon belül eleget tesz a kérelemnek (ld. 8. fejezet).</p>
+
+    <h2>6. Adatfeldolgozók</h2>
+    <p>Az adatkezelő az alábbi harmadik feleket veszi igénybe az alkalmazás üzemeltetéséhez:</p>
+    <div class="pc-kv">
+      <div><b>GitHub, Inc. (Microsoft Corporation)</b><span>Webalkalmazás hosztolása (GitHub Pages) · USA – EU-US Data Privacy Framework; SCCs</span></div>
+      <div><b>Google LLC</b><span>Adatgyűjtési végpont (Google Apps Script / Google Sheets) – az endpoint aktiválásakor válik aktív adatfeldolgozóvá · USA – EU-US Data Privacy Framework; SCCs</span></div>
+    </div>
+    <p>A fenti adatfeldolgozókkal az adatkezelő adatfeldolgozói szerződést köt, amelyek a GDPR 28. cikkének megfelelő garanciákat tartalmaznak.</p>
+
+    <h2>7. Harmadik országba való adattovábbítás</h2>
+    <p>A weboldal hosztingját és az adatgyűjtési infrastruktúrát az USA-ban székhellyel rendelkező vállalatok biztosítják. Az Európai Unión kívülre (harmadik országba) irányuló adattovábbítás az alábbi jogcímek alapján történik:</p>
+    <ul>
+      <li><b>EU–USA Adatvédelmi Keretrendszer:</b> a GitHub, Inc. és a Google LLC a keretrendszer hatálya alá tartozó, tanúsított szervezetek.</li>
+      <li><b>Standard Szerződési Feltételek (SCCs, 2021/914/EU):</b> az adatkezelési megállapodások tartalmazzák az Európai Bizottság által jóváhagyott módosított standard szerződési feltételeket.</li>
+    </ul>
+    <p>Az érintett az adattovábbításhoz kapcsolódó garanciákról a <a href="mailto:gergo.lencses@zel-group.com">gergo.lencses@zel-group.com</a> címen kérhet további tájékoztatást.</p>
+
+    <h2>8. Az érintett jogai</h2>
+    <p>A GDPR alapján az érintettet az alábbi jogok illetik meg. A jogok gyakorlásához kérelmet a <a href="mailto:gergo.lencses@zel-group.com">gergo.lencses@zel-group.com</a> e-mail-címre kell küldeni. Az adatkezelő a kérelmet a beérkezéstől számított 30 napon belül teljesíti.</p>
+    <h3>Hozzáférés joga (GDPR 15. cikk)</h3>
+    <p>Az érintett tájékoztatást kérhet arról, hogy az adatkezelő kezel-e rá vonatkozó személyes adatot, és ha igen, másolatot kérhet azokról.</p>
+    <h3>Helyesbítés joga (GDPR 16. cikk)</h3>
+    <p>Az érintett kérheti a pontatlan személyes adatok helyesbítését, illetve a hiányos adatok kiegészítését.</p>
+    <h3>Törlés („elfeledtetés") joga (GDPR 17. cikk)</h3>
+    <p>Az érintett kérheti személyes adatainak törlését, különösen ha visszavonja hozzájárulását, vagy az adatkezelés célja megszűnt. A 30 napos automatikus törlési ciklustól függetlenül az adatkezelő haladéktalanul törli az adatokat, ha az érintett ezt kéri.</p>
+    <h3>Az adatkezelés korlátozásának joga (GDPR 18. cikk)</h3>
+    <p>Bizonyos feltételek teljesülése esetén (pl. az adat pontosságát vitatják, vagy jogellenesnek tartott, de törlésre még nem kerülhet sor) az érintett kérheti az adatkezelés korlátozását.</p>
+    <h3>Adathordozhatóság joga (GDPR 20. cikk)</h3>
+    <p>Az érintett jogosult a rá vonatkozó, általa az adatkezelő rendelkezésére bocsátott személyes adatokat strukturált, géppel olvasható formátumban megkapni.</p>
+    <h3>Tiltakozás joga (GDPR 21. cikk)</h3>
+    <p>Az érintett jogos érdeken alapuló adatkezelés esetén tiltakozhat a személyes adatainak kezelése ellen.</p>
+    <h3>Hozzájárulás visszavonásának joga (GDPR 7. cikk (3) bek.)</h3>
+    <p>Az érintett bármikor visszavonhatja a hozzájárulását anélkül, hogy ez a visszavonás előtti adatkezelés jogszerűségét érintené. A visszavonás a jövőre nézve hat.</p>
+    <p>A hozzájárulás visszavonása, valamint bármely egyéb kérelem esetén kérjük, küldj e-mailt a <a href="mailto:gergo.lencses@zel-group.com">gergo.lencses@zel-group.com</a> címre a kérdőív kitöltési időpontjával és – ha megadtad – az e-mail-címeddel együtt, hogy azonosítani tudjuk a rekordot.</p>
+
+    <h2>9. Automatizált döntéshozatal és profilalkotás</h2>
+    <p>Az alkalmazás a skálakérdésekre adott válaszok alapján kiszámítja az öt dimenzió (Szembenézés, Önismeret, Purpose, Törzs, Tudatosság) átlagpontszámát, és azokat radar-diagramon jeleníti meg a kitöltőnek.</p>
+    <p>Ez a számítás kizárólag tájékoztató jellegű önreflexiós eszköz; nem vezet automatizált döntéshozatalhoz, és nem von maga után az érintettre nézve jogi vagy hasonlóan jelentős hatást. A GDPR 22. cikk alkalmazása ezért nem szükséges.</p>
+
+    <h2>10. Adatbiztonság</h2>
+    <p>Az adatkezelő az alábbi technikai és szervezési intézkedéseket alkalmazza:</p>
+    <ul>
+      <li><b>HTTPS-titkosítás:</b> az alkalmazás kizárólag HTTPS protokollon érhető el (GitHub Pages által biztosított TLS).</li>
+      <li><b>Adatminimálás:</b> az alkalmazás csak a felsorolt célok eléréséhez szükséges adatokat gyűjti.</li>
+      <li><b>Hozzáférés-korlátozás:</b> az összegyűjtött adatokhoz kizárólag az adatkezelő és az általa felhatalmazott személyek férnek hozzá.</li>
+      <li><b>30 napos törlési ciklus:</b> az adatok automatikusan törlésre kerülnek (ld. 5. fejezet).</li>
+      <li>Adatszivárgás esetén az adatkezelő 72 órán belül értesíti a NAIH-t, és indokolatlan késedelem nélkül az érintetteket, ha a szivárgás magas kockázatot jelent (GDPR 33–34. cikk).</li>
+    </ul>
+
+    <h2>11. Böngészőben tárolt adatok (localStorage)</h2>
+    <p>Az alkalmazás a kitöltés folyamatának mentéséhez a böngésző localStorage mechanizmusát használja. Ez a tárolás kizárólag az érintett saját eszközén történik, és az adatkezelő számára nem hozzáférhető.</p>
+    <ul>
+      <li>A mentett vázlat (draft) adatait a böngésző tárolja, amíg a kitöltő be nem fejezi a kérdőívet, vagy törli a böngészőadatokat.</li>
+      <li>A beküldés után az alkalmazás automatikusan törli a helyi vázlatot.</li>
+      <li>Az alkalmazás sütiket (cookies) nem alkalmaz.</li>
+    </ul>
+
+    <h2>12. A tájékoztató módosítása</h2>
+    <p>Az adatkezelő fenntartja a jogot a jelen tájékoztató módosítására, különösen jogszabályi változások, az alkalmazás funkcionális fejlesztése vagy az adatkezelési folyamatok megváltozása esetén.</p>
+    <p>A módosított tájékoztató az alkalmazásban és/vagy az adatkezelő weboldalán kerül közzétételre. Lényeges változás esetén az adatkezelő értesíti azokat az érintetteket, akiknek elérhetősége rendelkezésre áll.</p>
+    <p>A tájékoztató aktuális verziója mindig a hatályos dátummal és verziószámmal kerül feltüntetésre.</p>
+
+    <h2>13. Panasz benyújtása felügyeleti hatósághoz</h2>
+    <p>Ha az érintett úgy ítéli meg, hogy a személyes adatainak kezelése sérti a GDPR rendelkezéseit, jogosult panaszt benyújtani a felügyeleti hatósághoz:</p>
+    <div class="pc-kv">
+      <div><b>Nemzeti Adatvédelmi és Információszabadság Hatóság (NAIH)</b><span>Cím: 1055 Budapest, Falk Miksa utca 9–11. · Postacím: 1363 Budapest, Pf. 9.<br>Telefon: +36 (1) 391-1400 · E-mail: <a href="mailto:ugyfelszolgalat@naih.hu">ugyfelszolgalat@naih.hu</a> · <a href="https://www.naih.hu" target="_blank" rel="noopener">www.naih.hu</a></span></div>
+    </div>
+    <p>Az érintett emellett a lakóhelye, tartózkodási helye vagy a feltételezett jogsértés helye szerinti tagállam felügyeleti hatóságához is fordulhat.</p>
+
+    <div class="pc-meta" style="margin-top:24px;border-top:1px solid var(--muted);padding-top:12px;">Jelen tájékoztató 2026. május 29-től hatályos. · ZEL Group Zrt. · <a href="mailto:info@zel-group.com">info@zel-group.com</a></div>
+  `;
+}
+
+function openPrivacy() {
+  const c = document.getElementById('privacyContent');
+  if (c && !c.dataset.filled) { c.innerHTML = renderPrivacyContent(); c.dataset.filled = '1'; }
+  const o = document.getElementById('privacyOverlay');
+  o.classList.add('open'); o.setAttribute('aria-hidden', 'false');
+  const sc = o.querySelector('.privacy-scroll'); if (sc) sc.scrollTop = 0;
+}
+function closePrivacy() {
+  const o = document.getElementById('privacyOverlay');
+  o.classList.remove('open'); o.setAttribute('aria-hidden', 'true');
+}
+
 document.addEventListener('DOMContentLoaded', init);
 </script>
+<div class="privacy-overlay" id="privacyOverlay" aria-hidden="true">
+  <div class="privacy-topbar">
+    <button class="privacy-back" onclick="closePrivacy()" aria-label="Vissza">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>Vissza</span>
+    </button>
+  </div>
+  <div class="privacy-scroll"><div class="privacy-content" id="privacyContent"></div></div>
+</div>
 </body>
 </html>
