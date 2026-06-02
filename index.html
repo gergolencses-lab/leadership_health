@@ -900,7 +900,6 @@ body.segment-active .screen { transform: none !important; }
   filter: blur(6px); transform: scale(1); transition: transform .1s ease-out, opacity .25s; }
 .seg-rings { position: absolute; width: 94%; aspect-ratio: 1; transform: scale(1); transition: transform .1s ease-out; }
 .seg-rings circle { fill: none; stroke: rgba(255,255,255,0.10); stroke-width: 1; }
-.seg-wave { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); width: 100%; height: 160px; z-index: 0; opacity: 0; transition: opacity .4s; pointer-events: none; }
 
 .seg-top { position: relative; z-index: 3; padding: 22px 24px 8px; display: flex; align-items: center; gap: 14px; }
 .seg-back { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
@@ -925,6 +924,9 @@ body.segment-active .screen { transform: none !important; }
 .seg-play { width: 52px; height: 52px; border-radius: 50%; border: none; background: #fff; color: #1b3019; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .seg-play svg { width: 22px; height: 22px; }
 .seg-time { font-size: .78rem; color: rgba(255,255,255,0.55); font-variant-numeric: tabular-nums; }
+.seg-speed { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); color: rgba(255,255,255,0.85); border-radius: 14px; padding: 6px 10px; font-size: .72rem; font-weight: 600; cursor: pointer; font-family: var(--font-body); font-variant-numeric: tabular-nums; min-width: 46px; text-align: center; }
+.seg-speed:hover { background: rgba(255,255,255,0.16); }
+.seg-speed.boosted { background: rgba(143,199,161,0.18); border-color: rgba(143,199,161,0.45); color: #fff; }
 .seg-next { margin-left: auto; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22); color: #fff; border-radius: 22px; padding: 10px 20px; font-size: .9rem; font-weight: 600; cursor: pointer; font-family: var(--font-body); }
 .seg-next:hover { background: rgba(255,255,255,0.18); }
 
@@ -1073,7 +1075,23 @@ const BLOCKS = {
 
 // ========== SCREEN DEFINITIONS ==========
 // ========== AUDIO SEGMENTS (Karafiáth Balázs) ==========
-const SEG_RATE = 1.15; // hang lejátszási sebesség — a lyric-sync média-időből számol, ezért automatikusan szinkronban marad
+// Lejátszási sebesség — default 1.0 (natív). A felhasználó a player UI-on tudja váltani.
+// Mobile Safari time-stretch artefaktok (preservesPitch) miatt 1.0 az alapért.
+const SEG_RATES = [1.0, 1.15, 1.25];
+const SEG_RATE_KEY = 'wellbeing_seg_rate';
+function loadSegRate() {
+  const v = parseFloat(localStorage.getItem(SEG_RATE_KEY));
+  return SEG_RATES.includes(v) ? v : 1.0;
+}
+function saveSegRate(v) { try { localStorage.setItem(SEG_RATE_KEY, String(v)); } catch (e) {} }
+let SEG_RATE = loadSegRate();
+function nextSegRate() {
+  const i = SEG_RATES.indexOf(SEG_RATE);
+  SEG_RATE = SEG_RATES[(i + 1) % SEG_RATES.length];
+  saveSegRate(SEG_RATE);
+  return SEG_RATE;
+}
+function fmtSegRate(r) { return (r === 1.0 ? '1×' : (r + '×')); }
 const SEGMENTS = {
   seg1: {file:'audio/01-szembenezes.m4a', cues:'audio/01-szembenezes.json', label:'Bevezető'},
   seg2: {file:'audio/02-onismeret.m4a',   cues:'audio/02-onismeret.json',   label:'Átvezetés'},
@@ -1428,7 +1446,6 @@ function renderSegment(segId) {
           <circle cx="160" cy="160" r="118"/><circle cx="160" cy="160" r="152"/>
         </svg>
       </div>
-      <canvas class="seg-wave" id="segWave"></canvas>
       <div class="seg-top">
         <button class="seg-back" id="segBack" aria-label="Vissza">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -1441,6 +1458,7 @@ function renderSegment(segId) {
         <div class="seg-ctl-row">
           <button class="seg-play" id="segPlay" aria-label="Lejátszás / szünet"></button>
           <span class="seg-time" id="segTime">0:00</span>
+          <button class="seg-speed" id="segSpeed" aria-label="Lejátszási sebesség">1×</button>
           <button class="seg-next" id="segNext">Tovább →</button>
         </div>
       </div>
@@ -1456,7 +1474,6 @@ function teardownSegment() {
   if (!segState) return;
   try { segState.audio.pause(); } catch(e) {}
   if (segState.raf) cancelAnimationFrame(segState.raf);
-  try { if (segState.ac) segState.ac.close(); } catch(e) {}
   segState = null;
 }
 
@@ -1470,10 +1487,9 @@ function initSegment(segId, autoplay) {
   const st = {
     audio, lyricsEl,
     wrap: $('#segLyricsWrap'), glow: $('.seg-glow'), rings: $('.seg-rings'),
-    waveC: $('#segWave'), fill: $('#segProgressFill'), timeEl: $('#segTime'), playBtn: $('#segPlay'),
-    cues: [], lineEls: [], activeIdx: -2, amp: 0, mode: 'rings', ac: null, analyser: null, data: null, raf: null,
+    fill: $('#segProgressFill'), timeEl: $('#segTime'), playBtn: $('#segPlay'), speedBtn: $('#segSpeed'),
+    cues: [], lineEls: [], activeIdx: -2, amp: 0, raf: null,
   };
-  st.wctx = st.waveC.getContext('2d');
   segState = st;
 
   const fmt = t => { t = Math.max(0, t||0); const m = Math.floor(t/60), s = Math.floor(t%60); return m + ':' + String(s).padStart(2,'0'); };
@@ -1487,29 +1503,11 @@ function initSegment(segId, autoplay) {
   }
   function cueIndex(t) { let idx = -1; for (let i = 0; i < st.cues.length; i++) { if (st.cues[i].s <= t) idx = i; else break; } return idx; }
 
-  function initGraph() {
-    if (st.ac) return;
-    try {
-      st.ac = new (window.AudioContext || window.webkitAudioContext)();
-      const src = st.ac.createMediaElementSource(audio);
-      st.analyser = st.ac.createAnalyser();
-      st.analyser.fftSize = 512; st.analyser.smoothingTimeConstant = 0.85;
-      src.connect(st.analyser); st.analyser.connect(st.ac.destination);
-      st.data = new Uint8Array(st.analyser.fftSize);
-    } catch(e) {}
-  }
-  function play() { initGraph(); if (st.ac && st.ac.state === 'suspended') st.ac.resume(); audio.playbackRate = SEG_RATE; audio.play().catch(() => {}); }
+  function play() { audio.playbackRate = SEG_RATE; audio.play().catch(() => {}); }
   function syncIcon() { st.playBtn.innerHTML = audio.paused ? SEG_PLAY : SEG_PAUSE; }
-
-  function drawWave() {
-    const W = st.waveC.width, H = st.waveC.height, dpr = window.devicePixelRatio || 1;
-    st.wctx.clearRect(0, 0, W, H);
-    if (!st.analyser) return;
-    st.analyser.getByteTimeDomainData(st.data);
-    st.wctx.lineWidth = 2.4 * dpr; st.wctx.strokeStyle = 'rgba(143,199,161,0.92)'; st.wctx.lineJoin = 'round';
-    st.wctx.beginPath(); const slice = W / st.data.length;
-    for (let i = 0; i < st.data.length; i++) { const v = (st.data[i] - 128) / 128; const y = H/2 + v*(H/2)*0.92; i === 0 ? st.wctx.moveTo(0, y) : st.wctx.lineTo(i*slice, y); }
-    st.wctx.stroke();
+  function syncSpeedBtn() {
+    st.speedBtn.textContent = fmtSegRate(SEG_RATE);
+    st.speedBtn.classList.toggle('boosted', SEG_RATE !== 1.0);
   }
 
   function loop() {
@@ -1517,16 +1515,13 @@ function initSegment(segId, autoplay) {
     if (st.cues.length) setActive(cueIndex(t));
     st.fill.style.width = (t / (audio.duration || 1) * 100) + '%';
     st.timeEl.textContent = fmt(t);
-    if (st.analyser) {
-      st.analyser.getByteTimeDomainData(st.data);
-      let sum = 0; for (let i = 0; i < st.data.length; i++) { const v = (st.data[i] - 128) / 128; sum += v * v; }
-      const rms = Math.sqrt(sum / st.data.length); st.amp += (rms - st.amp) * 0.18; const a = Math.min(1, st.amp * 3.4);
-      if (st.mode === 'rings') {
-        st.rings.style.transform = 'scale(' + (1 + a * 0.13) + ')';
-        st.glow.style.transform = 'scale(' + (1 + a * 0.55) + ')';
-        st.glow.style.opacity = String(0.45 + a * 0.55);
-      } else drawWave();
-    }
+    // Szintetikus breathing animáció — nincs Web Audio API a kritikus útvonalon
+    const target = audio.paused ? 0 : (0.5 + 0.32 * Math.sin(t * 1.7) + 0.18 * Math.sin(t * 3.9 + 1.1));
+    st.amp += (Math.max(0, Math.min(1, target)) - st.amp) * 0.06;
+    const a = st.amp;
+    st.rings.style.transform = 'scale(' + (1 + a * 0.09) + ')';
+    st.glow.style.transform = 'scale(' + (1 + a * 0.42) + ')';
+    st.glow.style.opacity = String(0.42 + a * 0.42);
     st.raf = requestAnimationFrame(loop);
   }
 
@@ -1551,16 +1546,15 @@ function initSegment(segId, autoplay) {
 
   // Controls
   syncIcon();
+  syncSpeedBtn();
   audio.addEventListener('play', syncIcon);
   audio.addEventListener('pause', syncIcon);
   audio.addEventListener('ended', syncIcon);
   st.playBtn.addEventListener('click', () => { audio.paused ? play() : audio.pause(); });
+  st.speedBtn.addEventListener('click', () => { nextSegRate(); audio.playbackRate = SEG_RATE; syncSpeedBtn(); });
   $('#segProgress').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); audio.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * (audio.duration || 1); });
   $('#segNext').addEventListener('click', () => goNext());
   $('#segBack').addEventListener('click', () => goBack());
-
-  const dpr = window.devicePixelRatio || 1;
-  st.waveC.width = st.waveC.clientWidth * dpr; st.waveC.height = st.waveC.clientHeight * dpr;
 
   loop();
   if (autoplay) play(); // only auto-start when entered via a forward navigation gesture (Kezdjük / Tovább)
