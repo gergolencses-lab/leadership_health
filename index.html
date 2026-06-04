@@ -2325,13 +2325,15 @@ const DIM_LABELS = {facing:'Szembenézés', self:'Önismeret', purpose:'Purpose'
 const DIM_ORDER = ['facing','self','purpose','tribe','consciousness'];
 function scoreBand(v) { return v < 4 ? 'fejlesztendő' : (v < 7 ? 'kiegyensúlyozott' : 'erősség'); }
 
-// A riportban megjelenő 17 kérdés blokkonként (skála = sáv, szöveg = doboz)
+// A riportban megjelenő összes érdemi kérdés blokkonként — minden válasz benne van
+// (a demographics-blokk + a záró opt-in NEM tartozik ide). Balázs eredeti modellje:
+// "a nevre szolo szep grafikus cuccok benne az összes válasz, nemcsak egy szelekció"
 const REPORT_BLOCKS = [
-  { block:'facing',        qids:['q11','q14','q16','q20'] },
-  { block:'self',          qids:['q21','q23','q24','q27','q30'] },
-  { block:'purpose',       qids:['q32','q36'] },
-  { block:'tribe',         qids:['q42','q45','q47'] },
-  { block:'consciousness', qids:['q51','q53','q59'] },
+  { block:'facing',        qids:['q11','q12','q13','q14','q15','q16','q17','q18','q19','q20'] },
+  { block:'self',          qids:['q21','q22','q23','q24','q25','q26','q27','q28','q29','q30'] },
+  { block:'purpose',       qids:['q31','q32','q33','q34','q35','q36','q37','q38','q39','q40'] },
+  { block:'tribe',         qids:['q41','q42','q43','q44','q45','q46','q47','q48','q49','q50'] },
+  { block:'consciousness', qids:['q51','q52','q53','q54','q55','q56','q57','q58','q59','q60'] },
 ];
 // piros → zöld 10 színskála (gauge + sávok)
 const SCALE10 = ['#d64a3b','#df6a37','#e7883a','#edaa3f','#e8c64a','#cbc54e','#a3c158','#79b266','#52a061','#3a7d4e'];
@@ -2368,6 +2370,55 @@ function scaleBarHTML(v) {
   return `<div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:3px;flex:1;">${cells}</div><div style="font-family:'Libre Baskerville',serif;font-size:15px;color:#2d4a2b;width:54px;text-align:right;">${v} / 10</div></div>`;
 }
 
+// PDF report-render — minden válasz-típust kezel: scale (gauge sáv), percentage (vízszintes
+// sáv + %), yesno/choice/dropdown/text/number (szöveg-doboz), yesno_text (chip + szabad
+// szöveg), number_yesno (szám-label + igen/nem). Üres válasz "—" placeholder.
+function renderReportAnswer_(q) {
+  const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const has = x => x !== undefined && x !== null && String(x).trim() !== '';
+  const emDash = '<div style="color:#9aa392;font-size:13px;">—</div>';
+  const textBox = content => `<div style="border:1px solid #cdd8c6;border-radius:9px;padding:11px 14px;font-size:14px;color:#2d3a2b;line-height:1.5;background:#fff;white-space:pre-wrap;">${content}</div>`;
+  const v = getR(q.id);
+
+  switch (q.type) {
+    case 'scale':
+      return has(v) ? scaleBarHTML(Number(v)) : emDash;
+    case 'percentage': {
+      if (!has(v)) return emDash;
+      const pct = Math.max(0, Math.min(100, Number(v)));
+      return `<div style="display:flex;align-items:center;gap:10px;"><div style="flex:1;height:10px;background:#e6eedf;border-radius:5px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${bandColor(Math.max(1,Math.round(pct/10)))};border-radius:5px;"></div></div><div style="font-family:'Libre Baskerville',serif;font-size:15px;color:#2d4a2b;width:54px;text-align:right;">${pct}%</div></div>`;
+    }
+    case 'yesno':
+    case 'choice':
+    case 'dropdown':
+    case 'text':
+    case 'number':
+      return has(v) ? textBox(esc(String(v))) : emDash;
+    case 'yesno_text': {
+      const yn = getR(q.id);
+      const txt = getR(q.id + '_text');
+      const ynOk = has(yn), txtOk = has(txt);
+      if (!ynOk && !txtOk) return emDash;
+      const parts = [];
+      if (ynOk) parts.push(`<span style="display:inline-block;font-weight:700;color:#2d4a2b;background:#e6eedf;padding:2px 10px;border-radius:6px;font-size:13px;">${esc(String(yn))}</span>`);
+      if (txtOk) parts.push(`<div style="${ynOk?'margin-top:7px;':''}">${esc(String(txt))}</div>`);
+      return textBox(parts.join(''));
+    }
+    case 'number_yesno': {
+      const num = getR(q.id + '_num');
+      const yn = getR(q.id + '_yn');
+      const numOk = has(num), ynOk = has(yn);
+      if (!numOk && !ynOk) return emDash;
+      const parts = [];
+      if (numOk) parts.push(`<span><b style="font-family:'Libre Baskerville',serif;font-size:16px;color:#2d4a2b;">${esc(String(num))}</b> <span style="color:#5c6354;">${esc(q.numberLabel || '')}</span></span>`);
+      if (ynOk) parts.push(`<span>${esc(q.yesnoLabel || '')}: <b style="color:#2d4a2b;">${esc(String(yn))}</b></span>`);
+      return textBox(parts.join('<br>'));
+    }
+    default:
+      return has(v) ? textBox(esc(String(v))) : emDash;
+  }
+}
+
 function buildReportNode(scores) {
   const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
   const name = (getR('optin_name')||'').trim();
@@ -2387,14 +2438,10 @@ function buildReportNode(scores) {
   const blocks = REPORT_BLOCKS.map(b => {
     const items = b.qids.map(qid => {
       const q = qMap[qid]; if (!q) return '';
-      const v = getR(qid);
-      const has = v !== undefined && v !== null && String(v).trim() !== '';
-      const answer = (q.type === 'scale')
-        ? (has ? scaleBarHTML(Number(v)) : '<div style="color:#9aa392;font-size:13px;">—</div>')
-        : `<div style="border:1px solid #cdd8c6;border-radius:9px;padding:11px 14px;font-size:14px;color:#2d3a2b;line-height:1.5;background:#fff;white-space:pre-wrap;">${has ? esc(String(v)) : '—'}</div>`;
-      return `<div style="margin:14px 0;"><div style="font-size:12.5px;color:#5c6354;margin-bottom:5px;">${esc(q.label)}</div>${answer}</div>`;
+      const sublabel = q.sublabel ? `<div style="font-size:11px;color:#9aa392;margin-bottom:5px;font-style:italic;">${esc(q.sublabel)}</div>` : '';
+      return `<div style="margin:16px 0;page-break-inside:avoid;"><div style="font-size:12.5px;color:#5c6354;margin-bottom:${q.sublabel?'2px':'5px'};">${esc(q.label)}</div>${sublabel}${renderReportAnswer_(q)}</div>`;
     }).join('');
-    return `<div style="margin-top:22px;page-break-inside:avoid;"><div style="font-family:'Libre Baskerville',serif;font-size:17px;color:#2d4a2b;border-bottom:2px solid #cdd8c6;padding-bottom:5px;margin-bottom:8px;">${BLOCKS[b.block].num} ${esc(BLOCKS[b.block].title)}</div>${items}</div>`;
+    return `<div style="margin-top:24px;"><div style="font-family:'Libre Baskerville',serif;font-size:17px;color:#2d4a2b;border-bottom:2px solid #cdd8c6;padding-bottom:5px;margin-bottom:8px;">${BLOCKS[b.block].num} ${esc(BLOCKS[b.block].title)}</div>${items}</div>`;
   }).join('');
 
   const node = document.createElement('div');
