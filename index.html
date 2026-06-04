@@ -608,6 +608,46 @@ body {
 .radar-intro p:last-child { margin-bottom: 0; }
 .radar-intro .accent-line { color: var(--primary); font-weight: 700; }
 
+/* ========== OPT-IN SCREEN ========== */
+.optin-container { display: flex; flex-direction: column; padding-top: 8px; }
+.optin-eyebrow { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); font-weight: 600; margin-bottom: 8px; }
+.optin-title { font-family: var(--font-heading); font-size: 1.4rem; line-height: 1.3; color: var(--text); margin-bottom: 6px; }
+.optin-subtitle { font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 22px; line-height: 1.5; }
+.optin-card { border: 2px solid var(--muted); border-radius: 14px; padding: 16px 18px; background: var(--bg); cursor: pointer; transition: border-color 0.2s, background 0.2s; text-align: left; margin-bottom: 12px; }
+.optin-card.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--bg)); }
+.optin-card-title { font-family: var(--font-body); font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; gap: 12px; }
+.optin-card-radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--muted); flex-shrink: 0; position: relative; transition: border-color 0.2s; }
+.optin-card.selected .optin-card-radio { border-color: var(--accent); }
+.optin-card.selected .optin-card-radio::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent); }
+.optin-card-desc { font-size: 0.86rem; color: var(--text-secondary); line-height: 1.5; padding-left: 32px; }
+.optin-card-detail { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; padding-left: 32px; }
+.optin-card.selected .optin-card-detail { max-height: 260px; padding-top: 14px; }
+.optin-input { width: 100%; padding: 11px 13px; border: 1px solid var(--muted); border-radius: 8px; font-family: var(--font-body); font-size: 0.95rem; background: var(--bg); color: var(--text); margin-bottom: 8px; }
+.optin-input:focus { outline: none; border-color: var(--accent); }
+.optin-input.input-error { border-color: var(--error); }
+.optin-error { display: none; color: var(--error); font-size: 0.8rem; margin-top: 2px; }
+.optin-error.visible { display: block; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.optin-card.shake { animation: shake 0.4s ease-in-out; }
+
+/* ========== THANKYOU BOOK CARD ========== */
+.book-card { margin-top: 32px; padding: 18px; background: var(--surface); border-radius: 14px; border-top: 3px solid var(--accent); display: flex; align-items: center; gap: 16px; text-align: left; width: 100%; max-width: 380px; text-decoration: none; color: inherit; transition: transform 0.18s; }
+.book-card:hover { transform: translateY(-2px); }
+.book-illustration { width: 64px; height: 80px; flex-shrink: 0; animation: book-breathe 4.5s ease-in-out infinite; transform-origin: center; }
+.book-illustration svg { width: 100%; height: 100%; display: block; }
+.book-text { flex: 1; min-width: 0; }
+.book-eyebrow { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-secondary); margin-bottom: 4px; }
+.book-title { font-family: var(--font-heading); font-size: 1rem; color: var(--text); line-height: 1.3; margin-bottom: 3px; }
+.book-subtitle { font-size: 0.78rem; color: var(--text-secondary); font-style: italic; line-height: 1.4; }
+.book-cta { display: inline-block; margin-top: 10px; color: var(--accent); font-size: 0.82rem; font-weight: 700; }
+@keyframes book-breathe {
+  0%, 100% { transform: scale(1) rotate(-1.5deg); }
+  50% { transform: scale(1.04) rotate(1.5deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .book-illustration { animation: none; }
+}
+
 /* ========== THEME SWITCHER ========== */
 .theme-switcher {
   display: flex;
@@ -1103,7 +1143,8 @@ const QUESTIONS = [
   {id:'q7',block:'demographics',type:'dropdown',label:'Melyik országban dolgozol elsősorban?',options:['Magyarország','Ausztria','Németország','Svájc','Románia','Szlovákia','Szerbia','Horvátország','Csehország','Lengyelország','Egyesült Királyság','Egyesült Államok','Egyéb']},
   {id:'q8',block:'demographics',type:'number',label:'Hány éves vagy?'},
   {id:'q9',block:'demographics',type:'choice',label:'Mi a legmagasabb iskolai végzettséged?',options:['Főiskola / BA','Egyetem / MA','PhD','MBA','Egyéb']},
-  {id:'q10',block:'demographics',type:'yesno_contact',label:'Szeretnél-e minderről mélyebben beszélni valakivel?'},
+  // q10 (yesno_contact) eltávolítva — a záró opt-in screen helyettesíti (3 szint: anon / email / waitlist).
+  // A name/email/wants_talk most az optin_name, optin_email, optin_level state key-ekben él.
 ];
 
 const BLOCKS = {
@@ -1173,9 +1214,10 @@ const SCREENS = [
   {id:'s21',type:'questions',blockIntro:'demographics',questions:['q1','q2','q3']},
   {id:'s22',type:'questions',questions:['q4','q6']},
   {id:'s23',type:'questions',questions:['q7','q8','q9']},
-  {id:'s24',type:'questions',questions:['q10'],submit:true},
+  // (a régi s24 / q10 yesno_contact képernyő eltávolítva — a záró opt-in screen veszi át a szerepét)
   {id:'radar',type:'radar'},
   {id:'seg7',type:'segment',segment:'seg7'},
+  {id:'optin',type:'optin',submit:true},
   {id:'thankyou',type:'thankyou'},
 ];
 
@@ -1287,7 +1329,7 @@ function buildAnswerRows_(blockId) {
   const rows = [];
   for (const q of QUESTIONS) {
     if (q.block !== blockId) continue;
-    if (q.id === 'q10') continue; // yesno_contact PII guard
+    if (q.id === 'q10') continue; // defenzív guard — q10 (yesno_contact) már eltávolítva, de ha bárhonnan visszakerülne, PII ne szivároghasson
     const v = state.responses[q.id];
     switch (q.type) {
       case 'scale':
@@ -1633,16 +1675,69 @@ function renderRadar() {
     </div>`;
 }
 
+function renderOptin() {
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const level = getR('optin_level') || '';
+  const name = esc(getR('optin_name') || '');
+  const email = esc(getR('optin_email') || '');
+  const isSel = lv => level === lv ? ' selected' : '';
+  return `
+    <div class="optin-container">
+      <div class="optin-eyebrow">Mielőtt elköszönünk</div>
+      <div class="optin-title">Szeretnél-e minderről mélyebben beszélni valakivel?</div>
+      <div class="optin-subtitle">Válassz, hogyan szeretnéd lezárni a kitöltést.</div>
+
+      <div class="optin-card${isSel('anon')}" data-optin-level="anon">
+        <div class="optin-card-title">
+          <span class="optin-card-radio"></span>
+          <span>Köszi, ennyi volt — anonim befejezem</span>
+        </div>
+        <div class="optin-card-desc">Nincs név, nincs email. A válaszaidat anonimizálva már rögzítettük.</div>
+      </div>
+
+      <div class="optin-card${isSel('email')}" data-optin-level="email">
+        <div class="optin-card-title">
+          <span class="optin-card-radio"></span>
+          <span>Kérem emailben a részletes visszajelzést</span>
+        </div>
+        <div class="optin-card-desc">A teljes válaszaid PDF-ben, a megadott email címedre.</div>
+        <div class="optin-card-detail">
+          <input type="text" class="optin-input" data-optin-field="name" placeholder="Neved" autocomplete="name" value="${name}">
+          <input type="email" class="optin-input" data-optin-field="email" placeholder="E-mail címed" autocomplete="email" inputmode="email" value="${email}">
+          <div class="optin-error" data-optin-error>Kérlek adj meg egy nevet és érvényes email címet.</div>
+        </div>
+      </div>
+
+      <div class="optin-card${isSel('waitlist')}" data-optin-level="waitlist">
+        <div class="optin-card-title">
+          <span class="optin-card-radio"></span>
+          <span>Szeretnék beszélni róla — várólista</span>
+        </div>
+        <div class="optin-card-desc">Iratkozz fel, és időpontot küldünk, amint nyílik lehetőség. A részletes PDF-et is megkapod.</div>
+        <div class="optin-card-detail">
+          <input type="text" class="optin-input" data-optin-field="name" placeholder="Neved" autocomplete="name" value="${name}">
+          <input type="email" class="optin-input" data-optin-field="email" placeholder="E-mail címed" autocomplete="email" inputmode="email" value="${email}">
+          <div class="optin-error" data-optin-error>Kérlek adj meg egy nevet és érvényes email címet.</div>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderThankYou() {
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const name = (getR('q10_name') || '').trim();
-  const email = (getR('q10_email') || '').trim();
-  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const optedIn = getR('q10') === 'Igen' && validEmail;
+  const level = getR('optin_level');
+  const name = (getR('optin_name') || '').trim();
+  const optedIn = (level === 'email' || level === 'waitlist');
+  const wantsTalk = (level === 'waitlist');
   const title = name ? `Köszönjük, ${esc(name)}!` : 'Köszönjük!';
-  const followup = optedIn
-    ? 'Elkészült a személyes visszajelzésed a válaszaid alapján. Töltsd le alább – és ha szeretnél róla mélyebben beszélni, hamarosan jelentkezünk a megadott elérhetőségeden.'
-    : 'Ha később mégis szeretnél mélyebben beszélni valakivel vagy személyes visszajelzést kérni, bármikor visszatérhetsz.';
+  let followup;
+  if (wantsTalk) {
+    followup = 'Felvettünk a várólistára. Ha nyílik lehetőség, emailben küldünk időpont-foglalási linket. A személyes visszajelzésed PDF-ben is megérkezik a megadott címedre.';
+  } else if (optedIn) {
+    followup = 'Elkészült a személyes visszajelzésed a válaszaid alapján. Töltsd le alább — emailben is megérkezik.';
+  } else {
+    followup = 'Köszi, hogy időt szántál erre. Ha később mégis szeretnél mélyebben beszélni vagy személyes visszajelzést kérni, bármikor visszatérhetsz.';
+  }
   const downloadBtn = optedIn
     ? `<button class="btn-next" id="btnDownloadReport" style="max-width:340px;margin-top:8px;" onclick="downloadReport()">Töltsd le a személyes visszajelzésed</button>
        <div class="welcome-desc" style="font-size:0.8rem;margin-top:10px;">A PDF bizalmas, csak neked szól. Ha még „készül", próbáld pár másodperc múlva.</div>`
@@ -1658,6 +1753,26 @@ function renderThankYou() {
       <div class="screen-subtitle">A válaszaid rögzítésre kerültek.</div>
       <div class="welcome-desc" style="margin-top:16px;">${followup}</div>
       ${downloadBtn}
+      <a class="book-card" href="https://libertinekonyvesbolt.hu/a-tudatos-torzsfonok-titka-utikalauz-a-kiteljesedes-fele-nem-csak-vezetoknek" target="_blank" rel="noopener">
+        <div class="book-illustration">
+          <svg viewBox="0 0 64 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="50" y="6" width="6" height="68" rx="1" fill="#fff" stroke="rgba(0,0,0,0.08)" stroke-width="0.5"/>
+            <rect x="52" y="4" width="4" height="68" rx="1" fill="#f6f5ee"/>
+            <rect x="6" y="4" width="48" height="72" rx="2" fill="var(--accent)"/>
+            <rect x="6" y="4" width="3" height="72" fill="rgba(0,0,0,0.18)"/>
+            <line x1="14" y1="22" x2="46" y2="22" stroke="#fff" stroke-opacity="0.92" stroke-width="2" stroke-linecap="round"/>
+            <line x1="14" y1="30" x2="38" y2="30" stroke="#fff" stroke-opacity="0.6" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="14" y1="36" x2="42" y2="36" stroke="#fff" stroke-opacity="0.6" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="14" y1="64" x2="32" y2="64" stroke="#fff" stroke-opacity="0.5" stroke-width="1" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="book-text">
+          <div class="book-eyebrow">${wantsTalk ? 'Addig is…' : 'Olvasásra ajánljuk'}</div>
+          <div class="book-title">A tudatos törzsfőnök titka</div>
+          <div class="book-subtitle">Útikalauz a kiteljesedés felé — nem csak vezetőknek</div>
+          <div class="book-cta">Megnézem a könyvet →</div>
+        </div>
+      </a>
       <button class="btn-restart" onclick="localStorage.clear();location.reload();">Újrakezdés</button>
     </div>`;
 }
@@ -1970,6 +2085,8 @@ function renderScreen(index) {
     html = renderSegment(def.segment);
   } else if (def.type === 'radar') {
     html = renderRadar();
+  } else if (def.type === 'optin') {
+    html = renderOptin();
   } else if (def.type === 'thankyou') {
     html = renderThankYou();
   } else {
@@ -2086,8 +2203,38 @@ function showScreen(index, direction, autoplay) {
   saveDraft();
 }
 
+function validateOptin_() {
+  const level = getR('optin_level');
+  if (!level) {
+    $$('.optin-card').forEach(c => {
+      c.classList.add('shake');
+      setTimeout(() => c.classList.remove('shake'), 500);
+    });
+    return false;
+  }
+  if (level === 'email' || level === 'waitlist') {
+    const name = (getR('optin_name')||'').trim();
+    const email = (getR('optin_email')||'').trim();
+    const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!name || !okEmail) {
+      const card = $('.optin-card.selected');
+      if (card) {
+        card.classList.add('shake');
+        setTimeout(() => card.classList.remove('shake'), 500);
+        const errEl = card.querySelector('[data-optin-error]');
+        if (errEl) errEl.classList.add('visible');
+        if (!name) { const i = card.querySelector('[data-optin-field="name"]'); if (i) i.classList.add('input-error'); }
+        if (!okEmail) { const i = card.querySelector('[data-optin-field="email"]'); if (i) i.classList.add('input-error'); }
+      }
+      return false;
+    }
+  }
+  return true;
+}
+
 function validateScreen() {
   const def = SCREENS[state.currentScreen];
+  if (def.type === 'optin') return validateOptin_();
   if (def.type !== 'questions') return true;
 
   let valid = true;
@@ -2223,7 +2370,7 @@ function scaleBarHTML(v) {
 
 function buildReportNode(scores) {
   const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-  const name = (getR('q10_name')||'').trim();
+  const name = (getR('optin_name')||'').trim();
   const role = (getR('q1')||'').trim();
   const dateStr = new Date().toLocaleDateString('hu-HU');
   const catCol = v => v >= 7 ? '#3a7d4e' : (v >= 4 ? '#c98a2f' : '#c0392b');
@@ -2279,12 +2426,12 @@ async function renderReportPDF(node) {
   pdf.addImage(imgData, 'JPEG', 0, position, pageW, imgH);
   heightLeft -= pageH;
   while (heightLeft > 0) { position -= pageH; pdf.addPage(); pdf.addImage(imgData, 'JPEG', 0, position, pageW, imgH); heightLeft -= pageH; }
-  const slug = (getR('q10_name')||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'kitolto';
+  const slug = (getR('optin_name')||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'kitolto';
   const filename = `vezetoi-jollet-${slug}-${new Date().toISOString().slice(0,10)}.pdf`;
   return { blob: pdf.output('blob'), base64: pdf.output('datauristring').split(',')[1], filename };
 }
 
-async function deliverReport() {
+async function deliverReport(wantsTalk) {
   try {
     const scores = computeScores();
     const node = buildReportNode(scores);
@@ -2304,9 +2451,9 @@ async function deliverReport() {
           mode: 'no-cors',
           body: JSON.stringify({
             secret: REPORT_SECRET,
-            name: (getR('q10_name')||'').trim(),
-            email: (getR('q10_email')||'').trim(),
-            phone: (getR('q10_phone')||'').trim(),
+            name: (getR('optin_name')||'').trim(),
+            email: (getR('optin_email')||'').trim(),
+            wants_talk: !!wantsTalk,
             scores, pdfBase64: out.base64, filename: out.filename,
           }),
         });
@@ -2331,13 +2478,19 @@ async function submitResponses() {
     durationSeconds: state.startedAt ? Math.round((Date.now() - state.startedAt) / 1000) : null,
     scores: computeScores(),
     responses: state.responses,
+    optin_level: getR('optin_level') || 'anon',
   };
   console.log('Survey payload:', JSON.stringify(payload, null, 2));
 
-  // Csak az email-megadóknak generálunk + tárolunk személyes reportot
-  const email = (getR('q10_email')||'').trim();
-  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  if (getR('q10') === 'Igen' && validEmail) { deliverReport(); }
+  // Az anonim sheet a flushAllBlocks_-szal már megkapott minden blokk-választ.
+  // Itt csak az email/waitlist szinten generálunk + küldünk személyes PDF-et.
+  const level = getR('optin_level');
+  if (level === 'email' || level === 'waitlist') {
+    const email = (getR('optin_email')||'').trim();
+    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (validEmail) { deliverReport(level === 'waitlist'); }
+  }
+  // anon: semmi extra POST. Csak draft tisztítás.
 
   try { localStorage.removeItem('wellbeing_draft'); } catch(e) {}
 }
@@ -2364,6 +2517,36 @@ function setupScreenListeners() {
       $('#btnNext').disabled = !state.privacyAccepted;
     });
   }
+
+  // Opt-in cards
+  $$('.optin-card').forEach(card => {
+    card.addEventListener('click', e => {
+      // Ne triggereljen, ha input vagy az ő child-eleméhez kattint a user
+      if (e.target.closest('input')) return;
+      const level = card.dataset.optinLevel;
+      setR('optin_level', level);
+      $$('.optin-card').forEach(c => c.classList.toggle('selected', c === card));
+      // Auto-focus az első üres mezőre, ha email vagy waitlist szintet választott
+      if (level === 'email' || level === 'waitlist') {
+        const nameInput = card.querySelector('[data-optin-field="name"]');
+        const emailInput = card.querySelector('[data-optin-field="email"]');
+        const targetInput = nameInput && !nameInput.value.trim() ? nameInput : emailInput;
+        if (targetInput) setTimeout(() => targetInput.focus(), 220);
+      }
+    });
+  });
+  $$('.optin-input').forEach(input => {
+    const field = input.dataset.optinField;
+    input.addEventListener('input', () => {
+      setR('optin_' + field, input.value);
+      input.classList.remove('input-error');
+      const card = input.closest('.optin-card');
+      if (card) {
+        const errEl = card.querySelector('[data-optin-error]');
+        if (errEl) errEl.classList.remove('visible');
+      }
+    });
+  });
 
   // Scale sliders
   $$('.scale-slider').forEach(slider => {
@@ -2503,6 +2686,21 @@ function init() {
   // Generate / load anonim respondent ID és próbáljuk meg újraküldeni a pending blokk-payloadokat
   getRespondentId();
   drainPending_();
+
+  // Draft migráció: a régi q10 (yesno_contact) → új optin_* mezők
+  if (state.responses) {
+    if (state.responses.q10 === 'Igen' && !state.responses.optin_level) {
+      state.responses.optin_level = 'email';
+      if (state.responses.q10_name && !state.responses.optin_name)   state.responses.optin_name  = state.responses.q10_name;
+      if (state.responses.q10_email && !state.responses.optin_email) state.responses.optin_email = state.responses.q10_email;
+    }
+    delete state.responses.q10;
+    delete state.responses.q10_name;
+    delete state.responses.q10_email;
+    delete state.responses.q10_phone;
+  }
+  // Clamp: ha a draft currentScreen-je túl van a (most rövidebb) SCREENS-en, ugorjunk az utolsó valid screen-re
+  if (state.currentScreen >= SCREENS.length) state.currentScreen = SCREENS.length - 1;
 
   // Apply theme
   document.documentElement.setAttribute('data-theme', state.theme);

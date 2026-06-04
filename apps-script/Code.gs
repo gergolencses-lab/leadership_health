@@ -59,10 +59,12 @@ function handlePdfReport_(d) {
 
   const s = d.scores || {};
   // Oszlopsorrend = a Sheet fejléce:
-  // Név | email | szembenézés | önismeret | purpose | törzs | tudatosság | PDF link
+  // Név | email | szembenézés | önismeret | purpose | törzs | tudatosság | Akar beszélgetni? | PDF link
+  const wantsTalkStr = (d.wants_talk === true) ? 'Igen' : ((d.wants_talk === false) ? 'Nem' : '');
   SpreadsheetApp.openById(SHEET_ID).getSheets()[0].appendRow([
     d.name || '', d.email || '',
     num_(s.facing), num_(s.self), num_(s.purpose), num_(s.tribe), num_(s.consciousness),
+    wantsTalkStr,
     url
   ]);
 
