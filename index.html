@@ -1174,6 +1174,173 @@ function loadDraft() {
   return false;
 }
 
+// ========== ANONYMOUS ANSWERS UPLOADER ==========
+// Long-format, fire-and-forget POST a Code.gs felé minden blokk-completion-nél.
+// A respondent_id NEM párosul névvel/emaillel sehol — a q10 (yesno_contact) explicit kihagyva.
+const RESPONDENT_KEY    = 'wellbeing_respondent_id';
+const SENT_BLOCKS_KEY   = 'wellbeing_sent_blocks';
+const PENDING_BLOCKS_KEY = 'wellbeing_pending_blocks';
+const ANSWERS_SCHEMA_VERSION = 'v1';
+
+function uuidV4Fallback_() {
+  // RFC4122 v4 fallback ha crypto.randomUUID nem elérhető (régi Safari <15.4).
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+function getRespondentId() {
+  let id = null;
+  try { id = localStorage.getItem(RESPONDENT_KEY); } catch(e) {}
+  if (!id) {
+    id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : uuidV4Fallback_();
+    try { localStorage.setItem(RESPONDENT_KEY, id); } catch(e) {}
+  }
+  return id;
+}
+function getSentBlocks_() {
+  try {
+    const v = JSON.parse(localStorage.getItem(SENT_BLOCKS_KEY) || '[]');
+    return Array.isArray(v) ? new Set(v) : new Set();
+  } catch(e) { return new Set(); }
+}
+function saveSentBlocks_(set) {
+  try { localStorage.setItem(SENT_BLOCKS_KEY, JSON.stringify([...set])); } catch(e) {}
+}
+function pushPending_(payload) {
+  try {
+    const q = JSON.parse(localStorage.getItem(PENDING_BLOCKS_KEY) || '[]');
+    q.push(payload);
+    localStorage.setItem(PENDING_BLOCKS_KEY, JSON.stringify(q));
+  } catch(e) {}
+}
+function drainPending_() {
+  if (!REPORT_ENDPOINT) return;
+  let q = [];
+  try { q = JSON.parse(localStorage.getItem(PENDING_BLOCKS_KEY) || '[]'); } catch(e) { return; }
+  if (!q.length) return;
+  const remaining = [];
+  Promise.allSettled(q.map(p =>
+    fetch(REPORT_ENDPOINT, { method:'POST', mode:'no-cors', body: JSON.stringify(p) })
+      .catch(err => { remaining.push(p); throw err; })
+  )).finally(() => {
+    try { localStorage.setItem(PENDING_BLOCKS_KEY, JSON.stringify(remaining)); } catch(e) {}
+  });
+}
+
+// Az aktuális screen melyik blokkban van. A SCREENS-en a blockIntro field jelzi a blokk
+// kezdetét; az utolsó látott blockIntro adja vissza az érvényes blokkot.
+function screenBlock(idx) {
+  let block = null;
+  for (let i = 0; i <= idx && i < SCREENS.length; i++) {
+    if (SCREENS[i].blockIntro) block = SCREENS[i].blockIntro;
+  }
+  return block;
+}
+
+// Egy adott blokk válaszainak összegyűjtése a state-ből a Code.gs payload formátumában.
+// q10 (yesno_contact) explicit kihagyva — PII safety guard.
+function buildAnswerRows_(blockId) {
+  const rows = [];
+  for (const q of QUESTIONS) {
+    if (q.block !== blockId) continue;
+    if (q.id === 'q10') continue; // yesno_contact PII guard
+    const v = state.responses[q.id];
+    switch (q.type) {
+      case 'scale':
+      case 'number':
+      case 'percentage': {
+        if (v === undefined || v === null || v === '') break;
+        const n = Number(v);
+        if (!isNaN(n)) rows.push({ question_id: q.id, question_type: q.type, value_num: n });
+        break;
+      }
+      case 'yesno': {
+        if (v === undefined || v === null || v === '') break;
+        const row = { question_id: q.id, question_type: q.type, value_text: String(v) };
+        if (v === 'Igen' || v === true) row.value_num = 1;
+        else if (v === 'Nem' || v === false) row.value_num = 0;
+        rows.push(row);
+        break;
+      }
+      case 'choice':
+      case 'dropdown':
+      case 'text': {
+        if (v === undefined || v === null || v === '') break;
+        rows.push({ question_id: q.id, question_type: q.type, value_text: String(v) });
+        break;
+      }
+      case 'yesno_text': {
+        const yn = state.responses[q.id];
+        const text = state.responses[q.id + '_text'];
+        const ynEmpty = (yn === undefined || yn === null || yn === '');
+        const txtEmpty = (text === undefined || text === null || text === '');
+        if (ynEmpty && txtEmpty) break;
+        rows.push({
+          question_id: q.id, question_type: q.type,
+          value_meta: JSON.stringify({ yn: ynEmpty ? null : yn, text: txtEmpty ? null : text })
+        });
+        break;
+      }
+      case 'number_yesno': {
+        const num = state.responses[q.id + '_num'];
+        const yn = state.responses[q.id + '_yn'];
+        const numEmpty = (num === undefined || num === null || num === '');
+        const ynEmpty = (yn === undefined || yn === null || yn === '');
+        if (numEmpty && ynEmpty) break;
+        rows.push({
+          question_id: q.id, question_type: q.type,
+          value_meta: JSON.stringify({ num: numEmpty ? null : Number(num), yn: ynEmpty ? null : yn })
+        });
+        break;
+      }
+      default: {
+        if (v !== undefined && v !== null && v !== '') {
+          rows.push({ question_id: q.id, question_type: q.type, value_text: String(v) });
+        }
+      }
+    }
+  }
+  return rows;
+}
+
+function submitBlockIfNew_(blockId) {
+  if (!blockId) return;
+  const sent = getSentBlocks_();
+  if (sent.has(blockId)) return;
+  const rows = buildAnswerRows_(blockId);
+  if (!rows.length) return; // semmi válasz a blokkban — ne küldjünk üreset
+  const payload = {
+    secret: REPORT_SECRET,
+    type: 'block_complete',
+    respondent_id: getRespondentId(),
+    submitted_at: new Date().toISOString(),
+    block: blockId,
+    schema_version: ANSWERS_SCHEMA_VERSION,
+    locale: (navigator.language || 'hu-HU').slice(0, 16),
+    client: (navigator.userAgent || '').slice(0, 200),
+    answers: rows,
+  };
+  // Optimista jelölés — no-cors módban úgyse tudjuk a státust; ha a fetch maga dob (offline),
+  // pending queue-ba tesszük és a következő block-completion vagy app boot újrapróbálja.
+  sent.add(blockId); saveSentBlocks_(sent);
+  if (!REPORT_ENDPOINT) { pushPending_(payload); return; }
+  try {
+    fetch(REPORT_ENDPOINT, { method:'POST', mode:'no-cors', body: JSON.stringify(payload) })
+      .catch(() => { pushPending_(payload); });
+  } catch (e) { pushPending_(payload); }
+}
+
+// A demographics blokk vége nem detektálható a screenBlock-átmenettel (a radar és thankyou
+// screen-eken nincs új blockIntro). A submit: true flag-es screen-en az összes
+// még nem küldött blokkot flushöljük.
+function flushAllBlocks_() {
+  const sent = getSentBlocks_();
+  const blocks = [...new Set(QUESTIONS.map(q => q.block))];
+  blocks.forEach(b => { if (!sent.has(b)) submitBlockIfNew_(b); });
+}
+
 // ========== AUTO-ADVANCE ==========
 // Determines if a screen consists only of auto-advance question types
 function isAutoAdvanceScreen(screenDef) {
@@ -1917,12 +2084,18 @@ function goNext() {
     state.startedAt = Date.now();
   }
 
-  // Submit after the last data question (before results)
+  // Submit after the last data question (before results) — régi PDF/email flow
   if (SCREENS[state.currentScreen].submit) {
     submitResponses();
+    // A demographics blokk vége — flushöljük az összes addig nem küldött blokkot az anonim sheet-re
+    flushAllBlocks_();
   }
 
   if (state.currentScreen < SCREENS.length - 1) {
+    // Blokk-átlépés detekt: ha a következő screen másik blokkban van, küldjük el a mostanit anonim sheet-re
+    const curBlock = screenBlock(state.currentScreen);
+    const nextBlock = screenBlock(state.currentScreen + 1);
+    if (curBlock && curBlock !== nextBlock) submitBlockIfNew_(curBlock);
     showScreen(state.currentScreen + 1, 'forward', true);
   }
 }
@@ -2262,6 +2435,10 @@ function setupScreenListeners() {
 // ========== INIT ==========
 function init() {
   const hasDraft = loadDraft();
+
+  // Generate / load anonim respondent ID és próbáljuk meg újraküldeni a pending blokk-payloadokat
+  getRespondentId();
+  drainPending_();
 
   // Apply theme
   document.documentElement.setAttribute('data-theme', state.theme);
