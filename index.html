@@ -565,6 +565,48 @@ body {
   cursor: pointer;
   line-height: 1.4;
 }
+.welcome-info-box {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-align: left;
+  width: 100%;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.welcome-info-box .info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.welcome-info-box .info-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--accent);
+}
+.radar-intro {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 18px 0 22px;
+  font-family: var(--font-heading);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--text);
+  text-align: left;
+}
+.radar-intro p { margin: 0 0 8px; }
+.radar-intro p:last-child { margin-bottom: 0; }
+.radar-intro .accent-line { color: var(--primary); font-weight: 700; }
 
 /* ========== THEME SWITCHER ========== */
 .theme-switcher {
@@ -1524,12 +1566,26 @@ function renderWelcome() {
       </div>
       <div class="screen-title">Vezetői Jóllét</div>
       <div class="screen-subtitle">Szűrés</div>
-      <div class="welcome-desc">Egy rövid, fókuszált önvizsgálat, kifejezetten vezetői szerepekre tervezve. Öt dimenzióban vizsgáljuk a jelenlegi állapotodat.</div>
-      <div class="welcome-badge">20–25 perc</div>
+      <div class="welcome-desc">Szia, örülök, hogy itt vagy. Ez egy rövid, fókuszált önvizsgálat, kifejezetten vezetői szerepekre tervezve. Öt dimenzióban vizsgálhatod meg a jelenlegi állapotodat.</div>
+      <div class="welcome-badge">30–40 perc</div>
       <div class="theme-switcher">
         <div class="theme-dot${state.theme==='forest'?' active':''}" data-theme="forest" title="Grounded"></div>
         <div class="theme-dot${state.theme==='simple'?' active':''}" data-theme="simple" title="Simple"></div>
         <div class="theme-dot${state.theme==='sunset'?' active':''}" data-theme="sunset" title="Sunset"></div>
+      </div>
+      <div class="welcome-info-box">
+        <div class="info-row">
+          <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 4 21 10 15 10"/>
+          </svg>
+          <span>Megszakíthatod bármikor — a böngésződ megőrzi az addigi válaszaidat, és onnan folytathatod, ahol abbahagytad.</span>
+        </div>
+        <div class="info-row">
+          <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/>
+          </svg>
+          <span>A végén, ha megadod az e-mail címed, a rendszer elküldi neked a kitöltött dokumentumot az összes válaszoddal.</span>
+        </div>
       </div>
       <div class="confidential-box">
         <h4>Szigorúan bizalmas</h4>
@@ -1567,6 +1623,11 @@ function renderRadar() {
       <div class="block-number">Eredményeid</div>
       <div class="screen-title" style="text-align:center;">Jóllét térkép</div>
       <div class="screen-subtitle" style="text-align:center;">Az 5 dimenzió összesítése a skálás válaszaid alapján</div>
+      <div class="radar-intro">
+        <p><span class="accent-line">Megcsináltad</span> – és ez már önmagában valami. A legtöbb vezető soha nem teszi fel magának ezeket a kérdéseket.</p>
+        <p>Nézd meg az ábrát: <span class="accent-line">ahol kiemelkedik, ott van erőforrásod – ahol beesik, ott van a munkád.</span> Ne siess, ülj vele egy kicsit.</p>
+        <p>És ha úgy érzed, hogy szeretnél mélyebbre menni – keress meg.</p>
+      </div>
       <canvas id="radarCanvas" width="680" height="680"></canvas>
       <div class="radar-scores">${scoreRows}</div>
     </div>`;
@@ -2198,7 +2259,10 @@ function buildReportNode(scores) {
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">${gauges}</div>
     <div style="font-size:11px;color:#7d8471;margin-top:12px;">Skála 1–10 · &lt;4 fejlesztendő · 4–6,9 kiegyensúlyozott · 7-től erősség. A pontszámok a skálás kérdésekből számolódnak; a szöveges válaszaid az önreflexiódat tükrözik.</div>
     ${blocks}
-    <div style="margin-top:30px;padding-top:12px;border-top:1px solid #cdd8c6;font-size:11px;color:#9aa392;">Szigorúan bizalmas — csak neked szól. Vezetői Jóllét Szűrés · a válaszokat anonim módon, kutatási céllal kezeljük.</div>
+    <div style="margin-top:30px;padding-top:12px;border-top:1px solid #cdd8c6;font-size:11px;color:#9aa392;line-height:1.5;">
+      <div>Szigorúan bizalmas — csak neked szól. Vezetői Jóllét Szűrés · a válaszokat anonim módon, kutatási céllal kezeljük.</div>
+      <div style="margin-top:6px;">A kérdéssor Karafiáth Balázs munkája alapján készült · <span style="color:#4a7c59;font-weight:600;">www.karafiath.com</span></div>
+    </div>
   `;
   node.querySelectorAll('.gph').forEach(ph => ph.appendChild(gaugeCanvas(Number(ph.dataset.v))));
   return node;
