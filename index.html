@@ -1142,6 +1142,7 @@ const QUESTIONS = [
   {id:'q6',block:'demographics',type:'choice',label:'Milyen típusú a szervezeted?',options:['Magánvállalkozás (tulajdonos-vezető)','Menedzseri pozíció nagyvállalatnál','Startup','Nonprofit / civil','Közszféra','Egyéb']},
   {id:'q7',block:'demographics',type:'dropdown',label:'Melyik országban dolgozol elsősorban?',options:['Magyarország','Ausztria','Németország','Svájc','Románia','Szlovákia','Szerbia','Horvátország','Csehország','Lengyelország','Egyesült Királyság','Egyesült Államok','Egyéb']},
   {id:'q8',block:'demographics',type:'number',label:'Hány éves vagy?'},
+  {id:'q5',block:'demographics',type:'dropdown',label:'Mi a nemed?',options:['Férfi','Nő','Nem kívánok válaszolni']},
   {id:'q9',block:'demographics',type:'choice',label:'Mi a legmagasabb iskolai végzettséged?',options:['Főiskola / BA','Egyetem / MA','PhD','MBA','Egyéb']},
   // q10 (yesno_contact) eltávolítva — a záró opt-in screen helyettesíti (3 szint: anon / email / waitlist).
   // A name/email/wants_talk most az optin_name, optin_email, optin_level state key-ekben él.
@@ -1213,7 +1214,7 @@ const SCREENS = [
   {id:'seg6',type:'segment',segment:'seg6'},
   {id:'s21',type:'questions',blockIntro:'demographics',questions:['q1','q2','q3']},
   {id:'s22',type:'questions',questions:['q4','q6']},
-  {id:'s23',type:'questions',questions:['q7','q8','q9']},
+  {id:'s23',type:'questions',questions:['q7','q8','q5','q9']},
   // (a régi s24 / q10 yesno_contact képernyő eltávolítva — a záró opt-in screen veszi át a szerepét)
   {id:'radar',type:'radar'},
   {id:'seg7',type:'segment',segment:'seg7'},
@@ -1753,7 +1754,7 @@ function renderThankYou() {
       <div class="screen-subtitle">A válaszaid rögzítésre kerültek.</div>
       <div class="welcome-desc" style="margin-top:16px;">${followup}</div>
       ${downloadBtn}
-      <a class="book-card" href="https://libertinekonyvesbolt.hu/a-tudatos-torzsfonok-titka-utikalauz-a-kiteljesedes-fele-nem-csak-vezetoknek" target="_blank" rel="noopener">
+      <a class="book-card" href="https://www.karafiath.com/konyv" target="_blank" rel="noopener">
         <div class="book-illustration">
           <svg viewBox="0 0 64 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <rect x="50" y="6" width="6" height="68" rx="1" fill="#fff" stroke="rgba(0,0,0,0.08)" stroke-width="0.5"/>
