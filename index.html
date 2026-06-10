@@ -2833,7 +2833,7 @@ function renderPrivacyContent() {
       <li>E-mail cím (kötelező a kapcsolatfelvételhez)</li>
       <li>Telefonszám (opcionális)</li>
     </ul>
-    <p>Ezek az adatok kizárólag a kapcsolatfelvétel céljára kerülnek felhasználásra, és a 30 napos törlési ciklus részeként törlésre kerülnek.</p>
+    <p>Ezek az adatok kizárólag a kapcsolatfelvétel céljára kerülnek felhasználásra, és a beküldéstől számított 30 napon belül törlésre kerülnek.</p>
     <h3>2.4 Munkamenet-metaadatok</h3>
     <ul>
       <li>Kitöltés megkezdésének időpontja (ISO 8601 timestamp)</li>
@@ -2852,12 +2852,12 @@ function renderPrivacyContent() {
 
     <h2>5. Az adatkezelés időtartama</h2>
     <div class="pc-kv">
-      <div><b>Kérdőíves válaszok (demográfiai és jóllét-adatok)</b><span>30 nap a beküldéstől számítva, ezt követően visszavonhatatlanul törlésre kerülnek</span></div>
+      <div><b>Kérdőíves válaszok (demográfiai és jóllét-adatok), anonimizált formában</b><span>Közvetlen azonosítók (név, e-mail, telefon) nélkül, tudományos kutatási és statisztikai célból <b>határozatlan ideig megőrizhetők</b> – GDPR 5. cikk (1) bek. e) pont (kutatási/statisztikai célú tárolás) és 89. cikk (1) bek. szerinti garanciákkal (adatminimalizálás, hozzáférés-korlátozás)</span></div>
       <div><b>Kapcsolatfelvételi adatok (név, e-mail, telefon)</b><span>30 nap a beküldéstől számítva, majd törlés</span></div>
-      <div><b>Munkamenet-metaadatok (időbélyegek, kitöltési idő)</b><span>30 nap a beküldéstől számítva, majd törlés</span></div>
+      <div><b>Munkamenet-metaadatok (időbélyegek, kitöltési idő)</b><span>Az anonimizált kutatási adatállomány részeként, azonosításra önállóan alkalmatlan formában megőrizhetők</span></div>
       <div><b>Anonimizált összesített pontszámok (dimenziónkénti átlagok)</b><span>Határozatlan ideig megőrizhetők kutatási célból – az érintett ezen adatokon keresztül nem azonosítható</span></div>
     </div>
-    <p>A 30 napos törlési ciklus automatikusan fut. A törölt adatok nem állíthatók vissza. Ha az érintett az adatok törlését a 30 napos határidő előtt kéri, az adatkezelő haladéktalanul, de legkésőbb 30 napon belül eleget tesz a kérelemnek (ld. 8. fejezet).</p>
+    <p>A közvetlen azonosításra alkalmas adatok (kapcsolatfelvételi adatok, valamint a kitöltőhöz köthető nyers válaszfájlok, pl. a személyes PDF) a fenti határidővel törlésre kerülnek; a törölt adatok nem állíthatók vissza. Az ezt követően megőrzött kutatási adatállomány anonimizált, közvetlen azonosítókat nem tartalmaz, és kizárólag tudományos, illetve statisztikai célból kerül felhasználásra (GDPR 5. cikk (1) bek. e) pont, 89. cikk (1) bek.). Ha az érintett a még hozzá köthető adatainak törlését kéri, az adatkezelő haladéktalanul, de legkésőbb 30 napon belül eleget tesz a kérelemnek (ld. 8. fejezet).</p>
 
     <h2>6. Adatfeldolgozók</h2>
     <p>Az adatkezelő az alábbi harmadik feleket veszi igénybe az alkalmazás üzemeltetéséhez:</p>
@@ -2903,7 +2903,7 @@ function renderPrivacyContent() {
       <li><b>HTTPS-titkosítás:</b> az alkalmazás kizárólag HTTPS protokollon érhető el (GitHub Pages által biztosított TLS).</li>
       <li><b>Adatminimálás:</b> az alkalmazás csak a felsorolt célok eléréséhez szükséges adatokat gyűjti.</li>
       <li><b>Hozzáférés-korlátozás:</b> az összegyűjtött adatokhoz kizárólag az adatkezelő és az általa felhatalmazott személyek férnek hozzá.</li>
-      <li><b>30 napos törlési ciklus:</b> az adatok automatikusan törlésre kerülnek (ld. 5. fejezet).</li>
+      <li><b>Tárolási idő korlátozása:</b> a közvetlen azonosításra alkalmas adatok meghatározott idő után automatikusan törlésre kerülnek; az ezt követően megőrzött kutatási adatállomány anonimizált (ld. 5. fejezet).</li>
       <li>Adatszivárgás esetén az adatkezelő 72 órán belül értesíti a NAIH-t, és indokolatlan késedelem nélkül az érintetteket, ha a szivárgás magas kockázatot jelent (GDPR 33–34. cikk).</li>
     </ul>
 
@@ -2927,7 +2927,7 @@ function renderPrivacyContent() {
     </div>
     <p>Az érintett emellett a lakóhelye, tartózkodási helye vagy a feltételezett jogsértés helye szerinti tagállam felügyeleti hatóságához is fordulhat.</p>
 
-    <div class="pc-meta" style="margin-top:24px;border-top:1px solid var(--muted);padding-top:12px;">Jelen tájékoztató 2026. május 29-től hatályos. · ZEL Group Zrt. · <a href="mailto:info@zel-group.com">info@zel-group.com</a></div>
+    <div class="pc-meta" style="margin-top:24px;border-top:1px solid var(--muted);padding-top:12px;">Jelen tájékoztató 2026. június 10-től hatályos. · ZEL Group Zrt. · <a href="mailto:info@zel-group.com">info@zel-group.com</a></div>
   `;
 }
 
