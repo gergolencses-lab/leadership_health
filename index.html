@@ -1417,6 +1417,52 @@ function submitBlockIfNew_(blockId) {
   } catch (e) { pushPending_(payload); }
 }
 
+// --- Onboarding / korai-tölcsér telemetria (a "255 látogató → első blokk" vakfolt lefedése) ---
+// A meglévő, bizonyítottan működő block_complete csatornát használja (block:'onboarding'),
+// külön dedup-kulccsal, respondent_id-onként egyszer/lépés. Így a welcome→első kérdés szakasz
+// is megjelenik UGYANABBAN az answers sheetben — backend-módosítás és redeploy nélkül.
+// Elemzéskor: block='onboarding' a korai tölcsér; block!='onboarding' a tényleges válaszok.
+function submitOnboardStep_(step) {
+  if (!step) return;
+  const KEY = 'wellbeing_sent_onboard';
+  let sent;
+  try { sent = new Set(JSON.parse(localStorage.getItem(KEY) || '[]')); } catch (e) { sent = new Set(); }
+  if (sent.has(step)) return; // respondent_id-onként minden lépés csak egyszer
+  const payload = {
+    secret: REPORT_SECRET,
+    type: 'block_complete',
+    respondent_id: getRespondentId(),
+    submitted_at: new Date().toISOString(),
+    block: 'onboarding',
+    schema_version: ANSWERS_SCHEMA_VERSION,
+    locale: (navigator.language || 'hu-HU').slice(0, 16),
+    client: (navigator.userAgent || '').slice(0, 200),
+    answers: [{ question_id: step, question_type: 'funnel_step', value_text: 'reached' }],
+  };
+  sent.add(step);
+  try { localStorage.setItem(KEY, JSON.stringify([...sent])); } catch (e) {}
+  if (!REPORT_ENDPOINT) { pushPending_(payload); return; }
+  try {
+    fetch(REPORT_ENDPOINT, { method:'POST', mode:'no-cors', body: JSON.stringify(payload) })
+      .catch(() => { pushPending_(payload); });
+  } catch (e) { pushPending_(payload); }
+}
+
+// A korai tölcsér-kapuk. A dedup miatt a 'b_intro_audio' csak az ELSŐ audio-szegmensnél,
+// a 'c_first_questions' csak az ELSŐ kérdés-képernyőnél tüzel — pont a vakfolt-szakasz.
+// A radar/opt-in/thankyou a folyamat végi mikro-lemorzsolódást is megmutatja.
+function trackOnboardingGate_(def, index) {
+  if (!def) return;
+  let step = null;
+  if (index === 0 || def.type === 'welcome') step = 'a_welcome';
+  else if (def.type === 'segment')           step = 'b_intro_audio';
+  else if (def.type === 'questions')         step = 'c_first_questions';
+  else if (def.type === 'radar')             step = 'e_radar_view';
+  else if (def.submit)                       step = 'f_optin_view';
+  else if (def.type === 'thankyou')          step = 'g_thankyou';
+  if (step) submitOnboardStep_(step);
+}
+
 // A demographics blokk vége nem detektálható a screenBlock-átmenettel (a radar és thankyou
 // screen-eken nincs új blockIntro). A submit: true flag-es screen-en az összes
 // még nem küldött blokkot flushöljük.
@@ -2201,6 +2247,7 @@ function showScreen(index, direction, autoplay) {
   updateNav();
   updateWatermark(index);
   updateBlockBadge(index);
+  trackOnboardingGate_(def, index);
   saveDraft();
 }
 
